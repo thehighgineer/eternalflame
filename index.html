@@ -4,136 +4,792 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Visualizador de llamas – Múltiples modos</title>
+  <!-- Tailwind para estilos básicos y UI cohesiva -->
+  <script src="https://cdn.tailwindcss.com/3.3.5"></script>
   <style>
-    /* Estilos básicos para canvas y panel de control */
-    body {
-      margin: 0;
-      overflow: hidden;
-      background-color: #000;
-      color: #fff;
-      font-family: sans-serif;
-    }
-    #controls {
+    /* Oculta temporalmente los contenedores según el modo */
+    #flame-wrapper,
+    #canvas2d {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 10px;
-      border-radius: 6px;
-      z-index: 10;
-      width: 240px;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
     }
-    #controls label {
-      display: block;
-      margin-bottom: 6px;
+    /* Panel de controles para modos 2D (esferas/abstracto) */
+    #controls2d label {
       font-size: 12px;
     }
-    #controls input[type="color"],
-    #controls input[type="range"],
-    #controls select,
-    #controls input[type="checkbox"] {
-      margin-left: 5px;
-    }
-    #controls input[type="range"] {
-      width: 100px;
+    #controls2d input[type="color"],
+    #controls2d input[type="range"],
+    #controls2d select,
+    #controls2d input[type="checkbox"] {
+      margin-left: 4px;
     }
   </style>
 </head>
-<body>
-  <canvas id="canvas"></canvas>
-  <div id="controls">
-    <label>
-      Modo:
-      <select id="modeSelect">
-        <option value="original">Original</option>
-        <option value="spheres" selected>Esferas</option>
-        <option value="abstract">Abstracto</option>
-      </select>
-    </label>
-    <label>
-      Color 1
-      <input type="color" id="color1" value="#fdcc0d" />
-    </label>
-    <label>
-      Color 2
-      <input type="color" id="color2" value="#32527b" />
-    </label>
-    <label>
-      Velocidad
-      <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" />
-    </label>
-    <label>
-      Altura
-      <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" />
-    </label>
-    <label>
-      Detalle
-      <input type="range" id="detail" min="50" max="500" step="10" value="200" />
-    </label>
-    <label>
-      Micrófono
-      <input type="checkbox" id="micToggle" />
-    </label>
-    <label>
-      Viento táctil
-      <input type="checkbox" id="windToggle" />
-    </label>
+<body class="bg-black text-white">
+  <!-- Selector de modo global -->
+  <div class="absolute top-2 left-2 z-20 bg-black/70 backdrop-blur px-3 py-2 rounded-lg border border-white/20">
+    <label class="text-sm font-medium mr-2">Modo:</label>
+    <select id="modeSelect" class="bg-black/60 text-white rounded-md border border-white/30 px-2 py-1">
+      <option value="original">Original</option>
+      <option value="spheres" selected>Esferas</option>
+      <option value="abstract">Abstracto</option>
+    </select>
   </div>
-  <script>
-    /*
-     * Visualizador de llamas con múltiples modos.
-     *
-     * Este script ofrece tres modos de visualización:
-     *  - "original": Partículas con un movimiento sinuoso que emula una llama tradicional.
-     *  - "spheres": Esferas flotando hacia arriba, similar al visualizador desplegado anteriormente.
-     *  - "abstract": Formas abstractas girando alrededor del centro para un efecto artístico.
-     *
-     * Los controles permiten cambiar colores, velocidad, altura, número de partículas (detalle),
-     * y activar el micrófono o el viento táctil.
-     */
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    let width, height;
-    function resize() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
 
-    // Objeto de configuración con valores iniciales
-    const settings = {
-      mode: 'spheres',
-      color1: '#fdcc0d',
-      color2: '#32527b',
-      speed: 1,
-      height: 1,
-      detail: 200,
-      mic: false,
-      windActive: false,
-      // Intensidad del resplandor de las partículas. Ajusta el radio del gradiente.
-      glow: 1,
+  <!-- Contenedor para el modo "original" (WebGL + React) -->
+  <div id="flame-wrapper" style="display:none;"></div>
+
+  <!-- Lienzo para modos 2D (esferas y abstracto) -->
+  <canvas id="canvas2d"></canvas>
+
+  <!-- Panel de control para modos 2D -->
+  <div id="controls2d" class="absolute top-12 left-2 z-20 bg-black/70 backdrop-blur px-4 py-3 rounded-lg border border-white/20 w-60" style="display:block;">
+    <div class="mb-2">
+      <label>Color 1
+        <input type="color" id="color1" class="align-middle" value="#fdcc0d" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Color 2
+        <input type="color" id="color2" class="align-middle" value="#32527b" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Velocidad
+        <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" class="w-32" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Altura
+        <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" class="w-32" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Detalle
+        <input type="range" id="detail" min="50" max="500" step="10" value="200" class="w-32" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Micrófono
+        <input type="checkbox" id="micToggle" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Viento táctil
+        <input type="checkbox" id="windToggle" class="align-middle" />
+      </label>
+    </div>
+  </div>
+
+  <!-- React y Babel para el modo "original" -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    /*
+     * Código de React para el modo "original". Utiliza el componente EternalFlameCanvas
+     * del visualizador WebGL avanzado, conservando todos los controles y presets.
+     * Este código se ejecuta cuando el modo seleccionado es "original".
+     */
+
+    // Funciones utilitarias
+    function hexToRgb(hex) {
+      let h = hex.replace('#', '');
+      if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+      const num = parseInt(h, 16);
+      return [((num >> 16) & 255) / 255, ((num >> 8) & 255) / 255, (num & 255) / 255];
+    }
+    function rgbToHex(rgb) {
+      return (
+        '#' +
+        rgb
+          .map((v) => Math.round(v * 255).toString(16).padStart(2, '0'))
+          .join('')
+      );
+    }
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    // Presets de colores y parámetros (incluyendo preset Spatialgineers)
+    const PRESETS = {
+      classic: {
+        cBase: '#3a0d00',
+        cMid: '#fd6a00',
+        cHot: '#ffd26a',
+        cBg: '#000000',
+        speed: 1.0,
+        turb: 1.0,
+        height: 1.2,
+        width: 1.4,
+        contrast: 1.4,
+        glow: 0.6,
+        wind: 0.3,
+        detail: 5,
+      },
+      blue: {
+        cBase: '#002033',
+        cMid: '#1e7fdd',
+        cHot: '#a8d7ff',
+        cBg: '#00040a',
+        speed: 0.9,
+        turb: 1.1,
+        height: 1.4,
+        width: 1.2,
+        contrast: 1.6,
+        glow: 0.9,
+        wind: 0.2,
+        detail: 6,
+      },
+      neon: {
+        cBase: '#3a0066',
+        cMid: '#ff00e5',
+        cHot: '#fdcc0d',
+        cBg: '#020008',
+        speed: 1.2,
+        turb: 1.3,
+        height: 1.1,
+        width: 1.6,
+        contrast: 1.2,
+        glow: 1.2,
+        wind: 0.5,
+        detail: 5,
+      },
+      brand: {
+        cBase: '#0a1622',
+        cMid: '#32527b',
+        cHot: '#fdcc0d',
+        cBg: '#000000',
+        speed: 1.0,
+        turb: 1.2,
+        height: 1.3,
+        width: 1.5,
+        contrast: 1.3,
+        glow: 1.0,
+        wind: 0.25,
+        detail: 6,
+      },
     };
 
-    // Partículas para los modos "spheres" y "original"
-    let particles = [];
-    // Formas abstractas
-    let abstracts = [];
+    // Componente principal: EternalFlameCanvas
+    function EternalFlameCanvas() {
+      const containerRef = React.useRef(null);
+      const canvasRef = React.useRef(null);
+      const glRef = React.useRef(null);
+      const programRef = React.useRef(null);
+      const uniformsRef = React.useRef({});
+      const rafRef = React.useRef(0);
+      const t0Ref = React.useRef(performance.now());
+      const lastTRef = React.useRef(performance.now());
+      const dprRef = React.useRef(1);
+      const micRef = React.useRef({ ctx: null, analyser: null, data: null, on: false, env: 0, sensitivity: 1 });
+      const stateRef = React.useRef({
+        base: hexToRgb(PRESETS.classic.cBase),
+        mid: hexToRgb(PRESETS.classic.cMid),
+        hot: hexToRgb(PRESETS.classic.cHot),
+        bg: hexToRgb(PRESETS.classic.cBg),
+        speed: PRESETS.classic.speed,
+        turb: PRESETS.classic.turb,
+        height: PRESETS.classic.height,
+        width: PRESETS.classic.width,
+        contrast: PRESETS.classic.contrast,
+        glow: PRESETS.classic.glow,
+        wind: PRESETS.classic.wind,
+        detail: PRESETS.classic.detail,
+        grain: 1.0,
+        pixel: 1.0,
+        drift: true,
+        seed: Math.random() * 1000,
+        audio: 0.0,
+        touchWind: false,
+        themeLight: false,
+      });
 
-    // Variables de viento interactivo
-    let wind = 0;
-    let targetWind = 0;
+      const [ui, setUi] = React.useState({
+        ...PRESETS.classic,
+        cBase: PRESETS.classic.cBase,
+        cMid: PRESETS.classic.cMid,
+        cHot: PRESETS.classic.cHot,
+        cBg: PRESETS.classic.cBg,
+        grain: true,
+        drift: true,
+        pixel: 1.0,
+        micReactive: false,
+        micSensitivity: 1.0,
+        touchWind: false,
+        themeLight: false,
+        fps: '—',
+        panelOpen: true,
+      });
 
-    // Variables de micrófono
-    let micEnabled = false;
-    let analyser;
-    let dataArray;
-    let audioCtx;
-    function initMic() {
-      if (micEnabled) return;
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then((stream) => {
+      const [toast, setToast] = React.useState('');
+      React.useEffect(() => {
+        if (!toast) return;
+        const id = setTimeout(() => setToast(''), 1600);
+        return () => clearTimeout(id);
+      }, [toast]);
+
+      // Construye y compila shaders
+      function makeProgram(gl) {
+        const vsSrc = `
+          attribute vec2 a_position;
+          varying vec2 v_uv;
+          void main(){
+            v_uv = a_position * 0.5 + 0.5;
+            gl_Position = vec4(a_position, 0.0, 1.0);
+          }
+        `;
+        const fsSrc = `
+          precision mediump float;
+          varying vec2 v_uv;
+          uniform vec2 u_res;
+          uniform float u_time;
+          uniform float u_seed;
+          uniform vec3 u_base;
+          uniform vec3 u_mid;
+          uniform vec3 u_hot;
+          uniform vec3 u_bg;
+          uniform float u_speed;
+          uniform float u_turb;
+          uniform float u_height;
+          uniform float u_width;
+          uniform float u_contrast;
+          uniform float u_glow;
+          uniform float u_wind;
+          uniform int   u_detail;
+          uniform float u_grain;
+          uniform float u_audio;
+
+          float hash21(vec2 p){
+            p = fract(p*vec2(123.34,345.45));
+            p += dot(p,p+34.345);
+            return fract(p.x*p.y);
+          }
+          float noise(vec2 p){
+            vec2 i = floor(p);
+            vec2 f = fract(p);
+            float a = hash21(i);
+            float b = hash21(i+vec2(1.,0.));
+            float c = hash21(i+vec2(0.,1.));
+            float d = hash21(i+vec2(1.,1.));
+            vec2 u = f*f*(3.-2.*f);
+            return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y;
+          }
+          mat2 rot(float a){ float s=sin(a), c=cos(a); return mat2(c,-s,s,c); }
+          float fbm(vec2 p, int oct){
+            float v=0.; float a=0.5;
+            for(int i=0;i<8;i++){
+              if(i>=oct) break;
+              v += a*noise(p);
+              p = rot(0.5)*p*2.0 + 10.0;
+              a *= 0.5;
+            }
+            return v;
+          }
+          vec3 palette(float t, vec3 c1, vec3 c2, vec3 c3){
+            float m1 = smoothstep(0.,0.6,t);
+            float m2 = smoothstep(0.3,1.,t);
+            vec3 c = mix(c1,c2,m1);
+            c = mix(c,c3,m2);
+            return c;
+          }
+          void main(){
+            vec2 uv = v_uv;
+            float aspect = u_res.x/u_res.y;
+            vec2 p = vec2((uv.x-0.5)*aspect, uv.y);
+
+            float t = u_time * (0.3 + u_speed*0.7) * (1.0 + u_audio*0.35);
+            vec2 seed = vec2(u_seed, u_seed*1.618);
+
+            vec2 q = vec2(
+              fbm(p*2.0 + vec2(0.0, t*1.2) + seed, u_detail),
+              fbm(p*2.0 + vec2(5.2, t*1.2) - seed, u_detail)
+            );
+            vec2 r = vec2(
+              fbm(p*3.0 + (u_turb + u_audio*0.6)*q + vec2(1.7, t*1.7) + seed*2.0, u_detail),
+              fbm(p*3.0 + (u_turb + u_audio*0.6)*q + vec2(9.2, t*1.7) - seed*2.0, u_detail)
+            );
+
+            float flameWidth = u_width;
+            float flameShape = 1.0 - (abs(p.x*flameWidth) + (1.0-uv.y)*(u_height - u_audio*0.5));
+            flameShape = smoothstep(-1.2, 0.5, flameShape);
+
+            float n = fbm(p*2.0 + r*1.2 + vec2((u_wind + u_audio*0.2)*t*0.3, -t*2.0), u_detail);
+            n = pow(clamp(n,0.0,1.0), 1.2);
+
+            float intensity = clamp(n*flameShape, 0.0, 1.0);
+            intensity = pow(intensity, u_contrast) * (1.0 + u_audio*0.4);
+
+            vec3 col = mix(u_bg, palette(intensity, u_base, u_mid, u_hot), intensity);
+            float glow = smoothstep(0.0, 0.8, intensity) * (u_glow + u_audio*1.0);
+            col += glow * vec3(1.0, 0.7, 0.3);
+
+            if(u_grain > 0.5){
+              float g = hash21(uv*u_res.xy + fract(t))*0.04;
+              col += g;
+            }
+            gl_FragColor = vec4(col,1.0);
+          }
+        `;
+
+        function compile(src, type) {
+          const sh = gl.createShader(type);
+          gl.shaderSource(sh, src);
+          gl.compileShader(sh);
+          if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+            throw new Error('Shader error: ' + gl.getShaderInfoLog(sh));
+          }
+          return sh;
+        }
+
+        const vs = compile(vsSrc, gl.VERTEX_SHADER);
+        const fs = compile(fsSrc, gl.FRAGMENT_SHADER);
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          throw new Error('Link error: ' + gl.getProgramInfoLog(prog));
+        }
+        gl.useProgram(prog);
+
+        const attribPos = gl.getAttribLocation(prog, 'a_position');
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array([-1, -1, 3, -1, -1, 3]),
+          gl.STATIC_DRAW
+        );
+        gl.enableVertexAttribArray(attribPos);
+        gl.vertexAttribPointer(attribPos, 2, gl.FLOAT, false, 0, 0);
+
+        const U = (name) => gl.getUniformLocation(prog, name);
+        uniformsRef.current = {
+          u_res: U('u_res'),
+          u_time: U('u_time'),
+          u_seed: U('u_seed'),
+          u_base: U('u_base'),
+          u_mid: U('u_mid'),
+          u_hot: U('u_hot'),
+          u_bg: U('u_bg'),
+          u_speed: U('u_speed'),
+          u_turb: U('u_turb'),
+          u_height: U('u_height'),
+          u_width: U('u_width'),
+          u_contrast: U('u_contrast'),
+          u_glow: U('u_glow'),
+          u_wind: U('u_wind'),
+          u_detail: U('u_detail'),
+          u_grain: U('u_grain'),
+          u_audio: U('u_audio'),
+        };
+
+        return prog;
+      }
+
+      // Resize observer
+      React.useEffect(() => {
+        const container = containerRef.current;
+        const canvas = canvasRef.current;
+        if (!container || !canvas) return;
+        const gl = (glRef.current = canvas.getContext('webgl', {
+          antialias: false,
+          alpha: false,
+          depth: false,
+          stencil: false,
+          preserveDrawingBuffer: false,
+        }));
+        if (!gl) return;
+        programRef.current = makeProgram(gl);
+        const resizeToContainer = () => {
+          const rect = container.getBoundingClientRect();
+          const targetDpr = clamp((window.devicePixelRatio || 1) * stateRef.current.pixel, 0.5, 2.0);
+          dprRef.current = targetDpr;
+          const w = Math.max(1, Math.floor(rect.width * targetDpr));
+          const h = Math.max(1, Math.floor(rect.height * targetDpr));
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+            gl.viewport(0, 0, w, h);
+          }
+        };
+        const ro = new ResizeObserver(resizeToContainer);
+        ro.observe(container);
+        resizeToContainer();
+
+        let frames = 0;
+        let fpsAcc = 0;
+        const draw = (now) => {
+          const U = uniformsRef.current;
+          const gl = glRef.current;
+          if (!gl) return;
+          // Drift y glow
+          if (stateRef.current.drift) {
+            const tt = (now - t0Ref.current) / 1000;
+            targetWindRef.current = lerp(targetWindRef.current, Math.sin(tt * 0.15 + stateRef.current.seed) * 0.6, 0.02);
+            stateRef.current.glow = lerp(stateRef.current.glow, 0.8 + Math.sin(tt * 0.25) * 0.4, 0.02);
+          }
+          // Ease wind
+          stateRef.current.wind = lerp(stateRef.current.wind, targetWindRef.current, 0.08);
+          // Mic envelope
+          stateRef.current.audio = micEnvelope();
+          gl.uniform2f(U.u_res, canvas.width, canvas.height);
+          gl.uniform1f(U.u_time, (now - t0Ref.current) / 1000);
+          gl.uniform1f(U.u_seed, stateRef.current.seed);
+          gl.uniform3f(U.u_base, ...stateRef.current.base);
+          gl.uniform3f(U.u_mid, ...stateRef.current.mid);
+          gl.uniform3f(U.u_hot, ...stateRef.current.hot);
+          gl.uniform3f(U.u_bg, ...stateRef.current.bg);
+          gl.uniform1f(U.u_speed, stateRef.current.speed);
+          gl.uniform1f(U.u_turb, stateRef.current.turb);
+          gl.uniform1f(U.u_height, stateRef.current.height);
+          gl.uniform1f(U.u_width, stateRef.current.width);
+          gl.uniform1f(U.u_contrast, stateRef.current.contrast);
+          gl.uniform1f(U.u_glow, stateRef.current.glow);
+          gl.uniform1f(U.u_wind, stateRef.current.wind);
+          gl.uniform1i(U.u_detail, stateRef.current.detail);
+          gl.uniform1f(U.u_grain, stateRef.current.grain);
+          gl.uniform1f(U.u_audio, stateRef.current.audio);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          const dt = now - lastTRef.current;
+          lastTRef.current = now;
+          frames++;
+          fpsAcc += dt;
+          if (fpsAcc >= 500) {
+            const fps = Math.round((frames * 1000) / fpsAcc);
+            setUi((u) => ({ ...u, fps: String(fps) }));
+            frames = 0;
+            fpsAcc = 0;
+          }
+          rafRef.current = requestAnimationFrame(draw);
+        };
+        rafRef.current = requestAnimationFrame(draw);
+        return () => {
+          cancelAnimationFrame(rafRef.current);
+          ro.disconnect();
+        };
+      }, []);
+
+      // Pointer-driven wind para React
+      const lastPointerX = React.useRef(null);
+      const targetWindRef = React.useRef(0.3);
+      React.useEffect(() => {
+        function onMove(e) {
+          if (!stateRef.current.touchWind) return;
+          const x = e.touches ? e.touches[0].clientX : e.clientX;
+          if (lastPointerX.current == null) {
+            lastPointerX.current = x;
+            return;
+          }
+          const dx = x - lastPointerX.current;
+          lastPointerX.current = x;
+          const norm = clamp(dx / window.innerWidth, -1, 1);
+          targetWindRef.current = clamp(stateRef.current.wind + norm * 1.2, -2, 2);
+        }
+        function onUp() {
+          lastPointerX.current = null;
+        }
+        window.addEventListener('pointermove', onMove, { passive: true });
+        window.addEventListener('touchmove', onMove, { passive: true });
+        window.addEventListener('pointerup', onUp, { passive: true });
+        window.addEventListener('touchend', onUp, { passive: true });
+        return () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('touchmove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('touchend', onUp);
+        };
+      }, []);
+
+      // Mic reactivity
+      async function initMic() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          const src = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 1024;
+          src.connect(analyser);
+          micRef.current = {
+            ctx,
+            analyser,
+            data: new Uint8Array(analyser.frequencyBinCount),
+            on: true,
+            env: 0,
+            sensitivity: ui.micSensitivity,
+          };
+          setToast('Mic on');
+          setUi((u) => ({ ...u, micReactive: true }));
+        } catch (e) {
+          setToast('Mic blocked/unavailable');
+          setUi((u) => ({ ...u, micReactive: false }));
+        }
+      }
+      function micEnvelope() {
+        const m = micRef.current;
+        if (!m || !m.analyser || !ui.micReactive) return 0;
+        m.analyser.getByteFrequencyData(m.data);
+        const bins = Math.min(40, m.data.length);
+        let sum = 0;
+        for (let i = 1; i < bins; i++) sum += m.data[i];
+        let avg = sum / bins / 255;
+        m.env = lerp(m.env, avg, 0.25);
+        return clamp(m.env * (m.sensitivity || 1), 0, 1.5);
+      }
+
+      // Share link
+      const shareLink = async () => {
+        const sr = stateRef.current;
+        const params = new URLSearchParams({
+          v: 'canvas',
+          c1: rgbToHex(sr.base).slice(1),
+          c2: rgbToHex(sr.mid).slice(1),
+          c3: rgbToHex(sr.hot).slice(1),
+          cb: rgbToHex(sr.bg).slice(1),
+          sp: sr.speed.toFixed(2),
+          tb: sr.turb.toFixed(2),
+          he: sr.height.toFixed(2),
+          wi: sr.width.toFixed(2),
+          ct: sr.contrast.toFixed(2),
+          gl: sr.glow.toFixed(2),
+          wd: sr.wind.toFixed(2),
+          de: String(sr.detail),
+          gr: sr.grain > 0.5 ? '1' : '0',
+          th: ui.themeLight ? '1' : '0',
+        });
+        const url = window.location.origin + window.location.pathname + '#' + params.toString();
+        try {
+          await navigator.clipboard.writeText(url);
+          setToast('Link copied');
+        } catch {
+          setToast('Copy failed');
+        }
+      };
+
+      // UI -> state mapping functions
+      const updateColor = (key, value) => {
+        setUi((u) => ({ ...u, [key]: value }));
+        const map = { cBase: 'base', cMid: 'mid', cHot: 'hot', cBg: 'bg' };
+        stateRef.current[map[key]] = hexToRgb(value);
+      };
+      const updateNum = (key, value) => {
+        setUi((u) => ({ ...u, [key]: value }));
+        stateRef.current[key] = typeof value === 'boolean' ? (value ? 1.0 : 0.0) : value;
+        if (key === 'grain') stateRef.current.grain = value ? 1.0 : 0.0;
+        if (key === 'pixel') {
+          stateRef.current.pixel = value;
+          const c = canvasRef.current;
+          if (c) {
+            const gl = glRef.current;
+            const rect = containerRef.current.getBoundingClientRect();
+            const targetDpr = clamp((window.devicePixelRatio || 1) * value, 0.5, 2.0);
+            dprRef.current = targetDpr;
+            const w = Math.max(1, Math.floor(rect.width * targetDpr));
+            const h = Math.max(1, Math.floor(rect.height * targetDpr));
+            if (c.width !== w || c.height !== h) {
+              c.width = w;
+              c.height = h;
+              gl.viewport(0, 0, w, h);
+            }
+          }
+        }
+      };
+
+      // Presets
+      const applyPreset = (p) => {
+        setUi((u) => ({ ...u, ...p }));
+        Object.assign(stateRef.current, {
+          base: hexToRgb(p.cBase),
+          mid: hexToRgb(p.cMid),
+          hot: hexToRgb(p.cHot),
+          bg: hexToRgb(p.cBg),
+          speed: p.speed,
+          turb: p.turb,
+          height: p.height,
+          width: p.width,
+          contrast: p.contrast,
+          glow: p.glow,
+          wind: p.wind,
+          detail: p.detail,
+        });
+        targetWindRef.current = p.wind;
+        stateRef.current.seed = Math.random() * 1000;
+      };
+
+      // Render UI
+      return (
+        <div ref={containerRef} className={(ui.themeLight ? 'bg-white text-black' : 'bg-black text-white') + ' w-full h-full relative'}>
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
+          {/* Panel de control de React */}
+          {ui.panelOpen && (
+            <div className={
+              'absolute right-3 top-3 z-10 w-[min(92vw,380px)] max-h-[calc(100%-24px)] rounded-2xl border shadow-xl backdrop-blur overflow-auto ' +
+              (ui.themeLight ? 'bg-white/80 border-black/10 text-neutral-900' : 'bg-slate-900/80 border-white/10 text-slate-100')
+            }>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+                <h1 className="text-sm font-semibold tracking-wide">Eternal Flame</h1>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fdcc0d', color: '#111' }}>
+                  Live
+                </span>
+              </div>
+              <div className="p-3 space-y-2">
+                {/* Presets */}
+                <div className="grid grid-cols-4 gap-2">
+                  <button className="text-xs rounded-full px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20" onClick={() => applyPreset(PRESETS.classic)}>Classic</button>
+                  <button className="text-xs rounded-full px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20" onClick={() => applyPreset(PRESETS.blue)}>Blue</button>
+                  <button className="text-xs rounded-full px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20" onClick={() => applyPreset(PRESETS.neon)}>Neon</button>
+                  <button className="text-xs rounded-full px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20" onClick={() => applyPreset(PRESETS.brand)}>Spatialgineers</button>
+                </div>
+                {/* Colores */}
+                <div className="grid grid-cols-[1fr_repeat(4,auto)] items-center gap-2">
+                  <label className="text-xs opacity-80">Colores</label>
+                  <input type="color" value={ui.cBase} onChange={(e) => updateColor('cBase', e.target.value)} />
+                  <input type="color" value={ui.cMid} onChange={(e) => updateColor('cMid', e.target.value)} />
+                  <input type="color" value={ui.cHot} onChange={(e) => updateColor('cHot', e.target.value)} />
+                  <input type="color" value={ui.cBg} onChange={(e) => updateColor('cBg', e.target.value)} />
+                </div>
+                {/* Deslizadores */}
+                {[
+                  ['Velocidad', 'speed', 0, 2, 0.01],
+                  ['Turbulencia', 'turb', 0, 2, 0.01],
+                  ['Altura', 'height', 0.2, 2.0, 0.01],
+                  ['Anchura', 'width', 0.6, 3.0, 0.01],
+                  ['Contraste', 'contrast', 0.4, 3.0, 0.01],
+                  ['Resplandor', 'glow', 0, 3, 0.01],
+                  ['Viento', 'wind', -2, 2, 0.01],
+                  ['Detalle', 'detail', 1, 7, 1],
+                  ['Performance', 'pixel', 0.5, 2.0, 0.05],
+                ].map(([label, key, min, max, step]) => (
+                  <div key={key} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                    <label className="text-xs opacity-80">{label}</label>
+                    <input
+                      type="range"
+                      min={min}
+                      max={max}
+                      step={step}
+                      value={ui[key]}
+                      onChange={(e) => updateNum(key, key === 'detail' ? parseInt(e.target.value, 10) : parseFloat(e.target.value))}
+                      className="w-44"
+                    />
+                  </div>
+                ))}
+                {/* Interruptores */}
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <label className="text-xs opacity-80">Auto drift</label>
+                  <input type="checkbox" checked={ui.drift} onChange={(e) => { setUi((u) => ({ ...u, drift: e.target.checked })); stateRef.current.drift = e.target.checked; }} />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <label className="text-xs opacity-80">Film grain</label>
+                  <input type="checkbox" checked={ui.grain} onChange={(e) => updateNum('grain', e.target.checked)} />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <label className="text-xs opacity-80">Mic reactivo</label>
+                  <input
+                    type="checkbox"
+                    checked={ui.micReactive}
+                    onChange={async (e) => {
+                      if (e.target.checked) await initMic();
+                      else {
+                        micRef.current.on = false;
+                        setUi((u) => ({ ...u, micReactive: false }));
+                      }
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <label className="text-xs opacity-80">Sensibilidad Mic</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={0.01}
+                    value={ui.micSensitivity}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      setUi((u) => ({ ...u, micSensitivity: v }));
+                      micRef.current.sensitivity = v;
+                    }}
+                    className="w-44"
+                  />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <label className="text-xs opacity-80">Viento táctil</label>
+                  <input type="checkbox" checked={ui.touchWind} onChange={(e) => { setUi((u) => ({ ...u, touchWind: e.target.checked })); stateRef.current.touchWind = e.target.checked; setToast(e.target.checked ? 'Touch wind on' : 'Touch wind off'); }} />
+                </div>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <label className="text-xs opacity-80">Tema claro</label>
+                  <input type="checkbox" checked={ui.themeLight} onChange={(e) => setUi((u) => ({ ...u, themeLight: e.target.checked }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="text-xs rounded-lg px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20" onClick={() => { stateRef.current.seed = Math.random() * 1000; setToast('Randomized'); }}>Randomizar</button>
+                  <button className="text-xs rounded-lg px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20" onClick={shareLink}>Compartir</button>
+                </div>
+                <div className="flex items-center justify-between text-[11px] opacity-80 pt-1">
+                  <span>FPS: {ui.fps}</span>
+                  <button className="text-xs px-2 py-1 rounded-md border border-white/10" onClick={() => setUi((u) => ({ ...u, panelOpen: !u.panelOpen }))}>{ui.panelOpen ? 'Ocultar panel' : 'Mostrar panel'}</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Toast */}
+          {toast && (
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-4 px-3 py-2 rounded-xl border border-white/10 bg-black/70 text-white text-xs shadow-lg">
+              {toast}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Exponer el componente a nivel global para que otros scripts puedan montarlo
+    window.EternalFlameCanvas = EternalFlameCanvas;
+  </script>
+
+  <script>
+    /*
+     * Código JavaScript plano para los modos 2D: "spheres" y "abstract".
+     * Se basa en el visualizador original de esferas flotando y formas abstractas.
+     * Proporciona partículas con gradiente radial y movimiento ascendente, además de
+     * formas que orbitan alrededor del centro para un efecto artístico.
+     */
+    (function() {
+      const canvas = document.getElementById('canvas2d');
+      const ctx = canvas.getContext('2d');
+      let width, height;
+      function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Estado del modo 2D
+      const settings = {
+        mode: 'spheres', // "spheres" o "abstract"
+        color1: '#fdcc0d',
+        color2: '#32527b',
+        speed: 1,
+        height: 1,
+        detail: 200,
+        mic: false,
+        windActive: false,
+        glow: 1,
+      };
+      let particles = [];
+      let abstracts = [];
+      let wind = 0;
+      let targetWind = 0;
+      let micEnabled = false;
+      let analyser;
+      let dataArray;
+      let audioCtx;
+      function initMic() {
+        if (micEnabled) return;
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           analyser = audioCtx.createAnalyser();
           const source = audioCtx.createMediaStreamSource(stream);
@@ -142,198 +798,201 @@
           const bufferLength = analyser.frequencyBinCount;
           dataArray = new Uint8Array(bufferLength);
           micEnabled = true;
-        })
-        .catch((err) => {
-          console.error('Error al inicializar el micrófono:', err);
+        }).catch((err) => {
+          console.error('Error mic:', err);
         });
-    }
-    function getMicLevel() {
-      if (!micEnabled || !analyser) return 0;
-      analyser.getByteFrequencyData(dataArray);
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
       }
-      return sum / dataArray.length / 255;
-    }
-
-    // Clase básica de partícula utilizada por los modos spheres y original
-    class Particle {
-      constructor(original = false) {
-        this.original = original;
-        this.reset();
+      function getMicLevel() {
+        if (!micEnabled || !analyser) return 0;
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        return sum / dataArray.length / 255;
       }
-      reset() {
-        this.x = Math.random() * width;
-        this.y = height;
-        this.radius = 15 + Math.random() * 20;
-        this.life = 0;
-        this.ttl = (80 + Math.random() * 80) * settings.height;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = -(0.8 + Math.random() * 1.5) * settings.speed;
-        // Para modo original, añade un componente sinusoidal para simular turbulencia
-        this.phase = Math.random() * Math.PI * 2;
-        this.offset = Math.random() * 50;
-      }
-      update(micMult = 1) {
-        // Movimiento base
-        this.x += this.vx + (settings.mode === 'original' ? Math.sin(this.phase + this.y * 0.01) * 0.5 : 0) + wind * 0.5;
-        this.y += this.vy - micMult * 2;
-        this.life++;
-        this.phase += 0.02;
-        if (this.life > this.ttl || this.y < -50) {
+      class Particle {
+        constructor() {
           this.reset();
         }
+        reset() {
+          this.x = Math.random() * width;
+          this.y = height;
+          this.radius = 15 + Math.random() * 20;
+          this.life = 0;
+          this.ttl = (80 + Math.random() * 80) * settings.height;
+          this.vx = (Math.random() - 0.5) * 2;
+          this.vy = -(0.8 + Math.random() * 1.5) * settings.speed;
+          this.phase = Math.random() * Math.PI * 2;
+        }
+        update(micMult) {
+          // Para modo "original" (no usado aquí) se puede añadir un componente sinusoidal.
+          this.x += this.vx + wind * 0.5;
+          this.y += this.vy - micMult * 2;
+          this.life++;
+          this.phase += 0.02;
+          if (this.life > this.ttl || this.y < -50) {
+            this.reset();
+          }
+        }
       }
-    }
-
-    // Inicializar partículas según detalle
-    function initParticles() {
-      particles = [];
-      for (let i = 0; i < settings.detail; i++) {
-        particles.push(new Particle(settings.mode === 'original'));
+      function initParticles() {
+        particles = [];
+        for (let i = 0; i < settings.detail; i++) {
+          particles.push(new Particle());
+        }
       }
-    }
-
-    // Inicializar formas abstractas
-    function initAbstracts() {
-      abstracts = [];
-      const count = Math.floor(settings.detail / 4);
-      for (let i = 0; i < count; i++) {
-        abstracts.push({
-          angle: Math.random() * Math.PI * 2,
-          radius: Math.random() * Math.min(width, height) * 0.4,
-          speed: 0.001 + Math.random() * 0.003,
-          size: 5 + Math.random() * 20,
-          color: randomColor(),
-        });
+      function initAbstracts() {
+        abstracts = [];
+        const count = Math.floor(settings.detail / 4);
+        for (let i = 0; i < count; i++) {
+          abstracts.push({
+            angle: Math.random() * Math.PI * 2,
+            radius: Math.random() * Math.min(width, height) * 0.4,
+            speed: 0.001 + Math.random() * 0.003,
+            size: 5 + Math.random() * 20,
+            color: randomColor(),
+          });
+        }
       }
-    }
-
-    // Generar un color aleatorio entre color1 y color2
-    function randomColor() {
-      const c1 = settings.color1.replace('#', '');
-      const c2 = settings.color2.replace('#', '');
-      const r1 = parseInt(c1.substring(0, 2), 16);
-      const g1 = parseInt(c1.substring(2, 4), 16);
-      const b1 = parseInt(c1.substring(4, 6), 16);
-      const r2 = parseInt(c2.substring(0, 2), 16);
-      const g2 = parseInt(c2.substring(2, 4), 16);
-      const b2 = parseInt(c2.substring(4, 6), 16);
-      const t = Math.random();
-      const r = Math.round(r1 + (r2 - r1) * t).toString(16).padStart(2, '0');
-      const g = Math.round(g1 + (g2 - g1) * t).toString(16).padStart(2, '0');
-      const b = Math.round(b1 + (b2 - b1) * t).toString(16).padStart(2, '0');
-      return '#' + r + g + b;
-    }
-
-    // Dibuja las partículas (modos spheres y original)
-    function drawParticles(micMult) {
-      for (const p of particles) {
-        p.update(micMult);
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * settings.height * settings.glow);
-        grad.addColorStop(0, settings.color1);
-        grad.addColorStop(1, settings.color2 + '00');
-        ctx.beginPath();
-        ctx.fillStyle = grad;
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
+      function randomColor() {
+        const c1 = settings.color1.replace('#', '');
+        const c2 = settings.color2.replace('#', '');
+        const r1 = parseInt(c1.substring(0, 2), 16);
+        const g1 = parseInt(c1.substring(2, 4), 16);
+        const b1 = parseInt(c1.substring(4, 6), 16);
+        const r2 = parseInt(c2.substring(0, 2), 16);
+        const g2 = parseInt(c2.substring(2, 4), 16);
+        const b2 = parseInt(c2.substring(4, 6), 16);
+        const t = Math.random();
+        const r = Math.round(r1 + (r2 - r1) * t).toString(16).padStart(2, '0');
+        const g = Math.round(g1 + (g2 - g1) * t).toString(16).padStart(2, '0');
+        const b = Math.round(b1 + (b2 - b1) * t).toString(16).padStart(2, '0');
+        return '#' + r + g + b;
       }
-    }
-
-    // Dibuja formas abstractas
-    function drawAbstract() {
-      const centerX = width / 2;
-      const centerY = height / 2;
-      for (const sh of abstracts) {
-        sh.angle += sh.speed * settings.speed;
-        // Movimiento radial oscilante
-        sh.radius += Math.sin(sh.angle * 0.5) * 0.5;
-        // Recalcular posición
-        const x = centerX + sh.radius * Math.cos(sh.angle);
-        const y = centerY + sh.radius * Math.sin(sh.angle);
-        ctx.beginPath();
-        ctx.fillStyle = sh.color;
-        ctx.arc(x, y, sh.size, 0, Math.PI * 2);
-        ctx.fill();
+      function drawParticles(micMult) {
+        for (const p of particles) {
+          p.update(micMult);
+          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * settings.height * settings.glow);
+          grad.addColorStop(0, settings.color1);
+          grad.addColorStop(1, settings.color2 + '00');
+          ctx.beginPath();
+          ctx.fillStyle = grad;
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
-    }
-
-    // Animación principal
-    function animate() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-      ctx.fillRect(0, 0, width, height);
-      // Nivel de micrófono para ajustar velocidad
-      const micLevel = getMicLevel();
-      const micMult = 1 + micLevel * 5;
-      // Dibujar según modo
-      if (settings.mode === 'spheres' || settings.mode === 'original') {
-        drawParticles(micMult);
-      } else if (settings.mode === 'abstract') {
-        drawAbstract();
+      function drawAbstract() {
+        const cx = width / 2;
+        const cy = height / 2;
+        for (const sh of abstracts) {
+          sh.angle += sh.speed * settings.speed;
+          sh.radius += Math.sin(sh.angle * 0.5) * 0.5;
+          const x = cx + sh.radius * Math.cos(sh.angle);
+          const y = cy + sh.radius * Math.sin(sh.angle);
+          ctx.beginPath();
+          ctx.fillStyle = sh.color;
+          ctx.arc(x, y, sh.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
-      // Ajustar viento de forma suave
-      wind += (targetWind - wind) * 0.05;
-      requestAnimationFrame(animate);
-    }
-
-    // Inicializar según el modo actual
-    function initMode() {
-      if (settings.mode === 'abstract') {
-        initAbstracts();
-      } else {
-        initParticles();
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, width, height);
+        const micLevel = getMicLevel();
+        const micMult = 1 + micLevel * 5;
+        if (settings.mode === 'spheres') {
+          drawParticles(micMult);
+        } else if (settings.mode === 'abstract') {
+          drawAbstract();
+        }
+        wind += (targetWind - wind) * 0.05;
+        requestAnimationFrame(animate);
       }
-    }
-
-    // Leer ajustes de los controles
-    function updateSettings() {
-      settings.color1 = document.getElementById('color1').value;
-      settings.color2 = document.getElementById('color2').value;
-      settings.speed = parseFloat(document.getElementById('speed').value);
-      settings.height = parseFloat(document.getElementById('height').value);
-      settings.detail = parseInt(document.getElementById('detail').value, 10);
-      // Ajustar partículas/abstractos si cambia el detalle
+      function initMode() {
+        if (settings.mode === 'abstract') {
+          initAbstracts();
+        } else {
+          initParticles();
+        }
+      }
+      function updateSettings() {
+        settings.color1 = document.getElementById('color1').value;
+        settings.color2 = document.getElementById('color2').value;
+        settings.speed = parseFloat(document.getElementById('speed').value);
+        settings.height = parseFloat(document.getElementById('height').value);
+        settings.detail = parseInt(document.getElementById('detail').value, 10);
+        initMode();
+      }
+      document.getElementById('color1').addEventListener('input', updateSettings);
+      document.getElementById('color2').addEventListener('input', updateSettings);
+      document.getElementById('speed').addEventListener('input', updateSettings);
+      document.getElementById('height').addEventListener('input', updateSettings);
+      document.getElementById('detail').addEventListener('input', updateSettings);
+      document.getElementById('micToggle').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          initMic();
+        } else {
+          micEnabled = false;
+        }
+      });
+      document.getElementById('windToggle').addEventListener('change', (e) => {
+        settings.windActive = e.target.checked;
+      });
+      canvas.addEventListener('mousemove', (e) => {
+        if (settings.windActive) {
+          const relX = e.clientX / width;
+          targetWind = (relX - 0.5) * 5;
+        }
+      });
+      canvas.addEventListener('mouseleave', () => {
+        targetWind = 0;
+      });
       initMode();
-    }
+      animate();
+      // Exponer la función para cambiar de modo desde la selección global
+      window._update2dMode = function(mode) {
+        settings.mode = mode;
+        initMode();
+      };
+    })();
 
-    // Cambiar modo desde el select
-    document.getElementById('modeSelect').addEventListener('change', (e) => {
-      settings.mode = e.target.value;
-      initMode();
-    });
-    // Controles de color, velocidad, altura, detalle
-    document.getElementById('color1').addEventListener('input', updateSettings);
-    document.getElementById('color2').addEventListener('input', updateSettings);
-    document.getElementById('speed').addEventListener('input', updateSettings);
-    document.getElementById('height').addEventListener('input', updateSettings);
-    document.getElementById('detail').addEventListener('input', updateSettings);
-
-    // Micrófono
-    document.getElementById('micToggle').addEventListener('change', (e) => {
-      if (e.target.checked) {
-        initMic();
+    // Selección global de modos y montaje/desmontaje de React
+    (function() {
+      const modeSelect = document.getElementById('modeSelect');
+      let isReactMounted = false;
+      modeSelect.addEventListener('change', function(e) {
+        const mode = e.target.value;
+        if (mode === 'original') {
+          // Mostrar llama WebGL
+          document.getElementById('canvas2d').style.display = 'none';
+          document.getElementById('controls2d').style.display = 'none';
+          document.getElementById('flame-wrapper').style.display = 'block';
+          if (!isReactMounted) {
+            ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
+            isReactMounted = true;
+          }
+        } else {
+          // Mostrar modos 2D
+          document.getElementById('flame-wrapper').style.display = 'none';
+          document.getElementById('canvas2d').style.display = 'block';
+          document.getElementById('controls2d').style.display = 'block';
+          window._update2dMode(mode);
+        }
+      });
+      // Inicialización al cargar
+      if (modeSelect.value === 'original') {
+        document.getElementById('canvas2d').style.display = 'none';
+        document.getElementById('controls2d').style.display = 'none';
+        document.getElementById('flame-wrapper').style.display = 'block';
+        ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
+        isReactMounted = true;
       } else {
-        micEnabled = false;
+        document.getElementById('flame-wrapper').style.display = 'none';
+        document.getElementById('canvas2d').style.display = 'block';
+        document.getElementById('controls2d').style.display = 'block';
       }
-    });
-    // Viento táctil
-    document.getElementById('windToggle').addEventListener('change', (e) => {
-      settings.windActive = e.target.checked;
-    });
-    canvas.addEventListener('mousemove', (e) => {
-      if (settings.windActive) {
-        const relativeX = e.clientX / width;
-        targetWind = (relativeX - 0.5) * 5;
-      }
-    });
-    canvas.addEventListener('mouseleave', () => {
-      targetWind = 0;
-    });
-
-    // Inicializar con modo por defecto y empezar animación
-    initMode();
-    animate();
+    })();
   </script>
 </body>
 </html>
