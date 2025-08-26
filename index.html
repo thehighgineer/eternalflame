@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eternal Flame Visualizer</title>
+  <style>
+    /* Basic styling for the canvas and control panel */
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+      color: #fff;
+      font-family: sans-serif;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 10px;
+      border-radius: 4px;
+      z-index: 10;
+      max-width: 200px;
+    }
+    #controls label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    #controls input[type="color"] {
+      margin-left: 5px;
+    }
+    #controls input[type="checkbox"] {
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <!-- Control panel for customizing the flame -->
+  <div id="controls">
+    <label>
+      Color 1
+      <input type="color" id="color1" value="#fdcc0d" />
+    </label>
+    <label>
+      Color 2
+      <input type="color" id="color2" value="#32527b" />
+    </label>
+    <label>
+      Mic reactive
+      <input type="checkbox" id="micToggle" />
+    </label>
+    <label>
+      Touch wind
+      <input type="checkbox" id="windToggle" />
+    </label>
+  </div>
+  <script>
+    /**
+     * Simple generative flame visualizer.
+     *
+     * This script uses a particle system to simulate rising flames on an HTML canvas. Users
+     * can customize the two primary colors, enable microphone reactivity (which
+     * influences flame speed based on ambient sound), and apply a wind effect via
+     * pointer movement. The design is deliberately lightweight to work smoothly
+     * across devices and modern browsers.
+     */
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    /** Adjust canvas dimensions to fill the viewport. */
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    /** Particle class representing an individual flame element. */
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      /** Reset a particle to the bottom of the canvas with random properties. */
+      reset() {
+        this.x = Math.random() * width;
+        this.y = height;
+        this.radius = 20 + Math.random() * 20;
+        this.life = 0;
+        this.ttl = 100 + Math.random() * 100; // time to live (frames)
+        this.vx = (Math.random() - 0.5) * 2; // horizontal velocity
+        this.vy = -(1 + Math.random() * 2); // upward velocity
+      }
+      /** Update particle position and lifecycle. */
+      update(speedMultiplier = 1) {
+        this.x += this.vx + wind * 0.5;
+        this.y += this.vy - speedMultiplier * 2;
+        this.life++;
+        if (this.life > this.ttl || this.y < -50) {
+          this.reset();
+        }
+      }
+    }
+
+    // Initialize a collection of particles for the flame.
+    const particles = [];
+    const particleCount = 200;
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle());
+    }
+
+    // Wind effect variables.
+    let wind = 0;
+    let targetWind = 0;
+    let windActive = false;
+
+    // Microphone analysis variables.
+    let micEnabled = false;
+    let analyser;
+    let dataArray;
+    let audioCtx;
+    /** Initialize the microphone and analysis chain. */
+    function initMic() {
+      if (micEnabled) return;
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioCtx.createAnalyser();
+          const source = audioCtx.createMediaStreamSource(stream);
+          source.connect(analyser);
+          analyser.fftSize = 256;
+          const bufferLength = analyser.frequencyBinCount;
+          dataArray = new Uint8Array(bufferLength);
+          micEnabled = true;
+        })
+        .catch((err) => {
+          console.error('Error initializing microphone:', err);
+        });
+    }
+
+    /** Compute a normalized mic level (0 to 1) based on frequency data. */
+    function getMicLevel() {
+      if (!micEnabled || !analyser) return 0;
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      return sum / dataArray.length / 255;
+    }
+
+    /** The main animation loop. */
+    function animate() {
+      // Slightly darken the canvas to create a trailing effect.
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Read colors from user inputs.
+      const c1 = document.getElementById('color1').value;
+      const c2 = document.getElementById('color2').value;
+
+      // Adjust flame speed based on mic level if enabled.
+      const micLevel = getMicLevel();
+      const speedMult = 1 + micLevel * 5;
+
+      // Draw and update each particle.
+      particles.forEach((p) => {
+        p.update(speedMult);
+        const gradient = ctx.createRadialGradient(
+          p.x,
+          p.y,
+          0,
+          p.x,
+          p.y,
+          p.radius
+        );
+        gradient.addColorStop(0, c1);
+        // Fade out outer edges for a natural flame glow. The appended
+        // transparency ensures particles blend smoothly.
+        gradient.addColorStop(1, c2 + '00');
+        ctx.beginPath();
+        ctx.fillStyle = gradient;
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Smoothly approach the target wind value for natural movement.
+      wind += (targetWind - wind) * 0.05;
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Event handlers for UI controls.
+    document.getElementById('micToggle').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        initMic();
+      } else {
+        micEnabled = false;
+      }
+    });
+    document.getElementById('windToggle').addEventListener('change', (e) => {
+      windActive = e.target.checked;
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (windActive) {
+        const relativeX = e.clientX / width;
+        targetWind = (relativeX - 0.5) * 5; // Map pointer position to wind range
+      }
+    });
+    canvas.addEventListener('mouseleave', () => {
+      targetWind = 0;
+    });
+  </script>
+</body>
+</html>
