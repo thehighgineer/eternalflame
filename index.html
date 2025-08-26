@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Eternal Flame Visualizer</title>
+  <title>Visualizador de llamas – Múltiples modos</title>
   <style>
-    /* Basic styling for the canvas and control panel */
+    /* Estilos básicos para canvas y panel de control */
     body {
       margin: 0;
       overflow: hidden;
@@ -17,29 +17,39 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.5);
       padding: 10px;
-      border-radius: 4px;
+      border-radius: 6px;
       z-index: 10;
-      max-width: 200px;
+      width: 240px;
     }
     #controls label {
       display: block;
       margin-bottom: 6px;
       font-size: 12px;
     }
-    #controls input[type="color"] {
-      margin-left: 5px;
-    }
+    #controls input[type="color"],
+    #controls input[type="range"],
+    #controls select,
     #controls input[type="checkbox"] {
       margin-left: 5px;
+    }
+    #controls input[type="range"] {
+      width: 100px;
     }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <!-- Control panel for customizing the flame -->
   <div id="controls">
+    <label>
+      Modo:
+      <select id="modeSelect">
+        <option value="original">Original</option>
+        <option value="spheres" selected>Esferas</option>
+        <option value="abstract">Abstracto</option>
+      </select>
+    </label>
     <label>
       Color 1
       <input type="color" id="color1" value="#fdcc0d" />
@@ -49,29 +59,41 @@
       <input type="color" id="color2" value="#32527b" />
     </label>
     <label>
-      Mic reactive
+      Velocidad
+      <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" />
+    </label>
+    <label>
+      Altura
+      <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" />
+    </label>
+    <label>
+      Detalle
+      <input type="range" id="detail" min="50" max="500" step="10" value="200" />
+    </label>
+    <label>
+      Micrófono
       <input type="checkbox" id="micToggle" />
     </label>
     <label>
-      Touch wind
+      Viento táctil
       <input type="checkbox" id="windToggle" />
     </label>
   </div>
   <script>
-    /**
-     * Simple generative flame visualizer.
+    /*
+     * Visualizador de llamas con múltiples modos.
      *
-     * This script uses a particle system to simulate rising flames on an HTML canvas. Users
-     * can customize the two primary colors, enable microphone reactivity (which
-     * influences flame speed based on ambient sound), and apply a wind effect via
-     * pointer movement. The design is deliberately lightweight to work smoothly
-     * across devices and modern browsers.
+     * Este script ofrece tres modos de visualización:
+     *  - "original": Partículas con un movimiento sinuoso que emula una llama tradicional.
+     *  - "spheres": Esferas flotando hacia arriba, similar al visualizador desplegado anteriormente.
+     *  - "abstract": Formas abstractas girando alrededor del centro para un efecto artístico.
+     *
+     * Los controles permiten cambiar colores, velocidad, altura, número de partículas (detalle),
+     * y activar el micrófono o el viento táctil.
      */
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let width, height;
-
-    /** Adjust canvas dimensions to fill the viewport. */
     function resize() {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
@@ -79,50 +101,34 @@
     window.addEventListener('resize', resize);
     resize();
 
-    /** Particle class representing an individual flame element. */
-    class Particle {
-      constructor() {
-        this.reset();
-      }
-      /** Reset a particle to the bottom of the canvas with random properties. */
-      reset() {
-        this.x = Math.random() * width;
-        this.y = height;
-        this.radius = 20 + Math.random() * 20;
-        this.life = 0;
-        this.ttl = 100 + Math.random() * 100; // time to live (frames)
-        this.vx = (Math.random() - 0.5) * 2; // horizontal velocity
-        this.vy = -(1 + Math.random() * 2); // upward velocity
-      }
-      /** Update particle position and lifecycle. */
-      update(speedMultiplier = 1) {
-        this.x += this.vx + wind * 0.5;
-        this.y += this.vy - speedMultiplier * 2;
-        this.life++;
-        if (this.life > this.ttl || this.y < -50) {
-          this.reset();
-        }
-      }
-    }
+    // Objeto de configuración con valores iniciales
+    const settings = {
+      mode: 'spheres',
+      color1: '#fdcc0d',
+      color2: '#32527b',
+      speed: 1,
+      height: 1,
+      detail: 200,
+      mic: false,
+      windActive: false,
+      // Intensidad del resplandor de las partículas. Ajusta el radio del gradiente.
+      glow: 1,
+    };
 
-    // Initialize a collection of particles for the flame.
-    const particles = [];
-    const particleCount = 200;
-    for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle());
-    }
+    // Partículas para los modos "spheres" y "original"
+    let particles = [];
+    // Formas abstractas
+    let abstracts = [];
 
-    // Wind effect variables.
+    // Variables de viento interactivo
     let wind = 0;
     let targetWind = 0;
-    let windActive = false;
 
-    // Microphone analysis variables.
+    // Variables de micrófono
     let micEnabled = false;
     let analyser;
     let dataArray;
     let audioCtx;
-    /** Initialize the microphone and analysis chain. */
     function initMic() {
       if (micEnabled) return;
       navigator.mediaDevices
@@ -138,11 +144,9 @@
           micEnabled = true;
         })
         .catch((err) => {
-          console.error('Error initializing microphone:', err);
+          console.error('Error al inicializar el micrófono:', err);
         });
     }
-
-    /** Compute a normalized mic level (0 to 1) based on frequency data. */
     function getMicLevel() {
       if (!micEnabled || !analyser) return 0;
       analyser.getByteFrequencyData(dataArray);
@@ -153,48 +157,159 @@
       return sum / dataArray.length / 255;
     }
 
-    /** The main animation loop. */
-    function animate() {
-      // Slightly darken the canvas to create a trailing effect.
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-      ctx.fillRect(0, 0, width, height);
+    // Clase básica de partícula utilizada por los modos spheres y original
+    class Particle {
+      constructor(original = false) {
+        this.original = original;
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * width;
+        this.y = height;
+        this.radius = 15 + Math.random() * 20;
+        this.life = 0;
+        this.ttl = (80 + Math.random() * 80) * settings.height;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = -(0.8 + Math.random() * 1.5) * settings.speed;
+        // Para modo original, añade un componente sinusoidal para simular turbulencia
+        this.phase = Math.random() * Math.PI * 2;
+        this.offset = Math.random() * 50;
+      }
+      update(micMult = 1) {
+        // Movimiento base
+        this.x += this.vx + (settings.mode === 'original' ? Math.sin(this.phase + this.y * 0.01) * 0.5 : 0) + wind * 0.5;
+        this.y += this.vy - micMult * 2;
+        this.life++;
+        this.phase += 0.02;
+        if (this.life > this.ttl || this.y < -50) {
+          this.reset();
+        }
+      }
+    }
 
-      // Read colors from user inputs.
-      const c1 = document.getElementById('color1').value;
-      const c2 = document.getElementById('color2').value;
+    // Inicializar partículas según detalle
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < settings.detail; i++) {
+        particles.push(new Particle(settings.mode === 'original'));
+      }
+    }
 
-      // Adjust flame speed based on mic level if enabled.
-      const micLevel = getMicLevel();
-      const speedMult = 1 + micLevel * 5;
+    // Inicializar formas abstractas
+    function initAbstracts() {
+      abstracts = [];
+      const count = Math.floor(settings.detail / 4);
+      for (let i = 0; i < count; i++) {
+        abstracts.push({
+          angle: Math.random() * Math.PI * 2,
+          radius: Math.random() * Math.min(width, height) * 0.4,
+          speed: 0.001 + Math.random() * 0.003,
+          size: 5 + Math.random() * 20,
+          color: randomColor(),
+        });
+      }
+    }
 
-      // Draw and update each particle.
-      particles.forEach((p) => {
-        p.update(speedMult);
-        const gradient = ctx.createRadialGradient(
-          p.x,
-          p.y,
-          0,
-          p.x,
-          p.y,
-          p.radius
-        );
-        gradient.addColorStop(0, c1);
-        // Fade out outer edges for a natural flame glow. The appended
-        // transparency ensures particles blend smoothly.
-        gradient.addColorStop(1, c2 + '00');
+    // Generar un color aleatorio entre color1 y color2
+    function randomColor() {
+      const c1 = settings.color1.replace('#', '');
+      const c2 = settings.color2.replace('#', '');
+      const r1 = parseInt(c1.substring(0, 2), 16);
+      const g1 = parseInt(c1.substring(2, 4), 16);
+      const b1 = parseInt(c1.substring(4, 6), 16);
+      const r2 = parseInt(c2.substring(0, 2), 16);
+      const g2 = parseInt(c2.substring(2, 4), 16);
+      const b2 = parseInt(c2.substring(4, 6), 16);
+      const t = Math.random();
+      const r = Math.round(r1 + (r2 - r1) * t).toString(16).padStart(2, '0');
+      const g = Math.round(g1 + (g2 - g1) * t).toString(16).padStart(2, '0');
+      const b = Math.round(b1 + (b2 - b1) * t).toString(16).padStart(2, '0');
+      return '#' + r + g + b;
+    }
+
+    // Dibuja las partículas (modos spheres y original)
+    function drawParticles(micMult) {
+      for (const p of particles) {
+        p.update(micMult);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * settings.height * settings.glow);
+        grad.addColorStop(0, settings.color1);
+        grad.addColorStop(1, settings.color2 + '00');
         ctx.beginPath();
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = grad;
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fill();
-      });
+      }
+    }
 
-      // Smoothly approach the target wind value for natural movement.
+    // Dibuja formas abstractas
+    function drawAbstract() {
+      const centerX = width / 2;
+      const centerY = height / 2;
+      for (const sh of abstracts) {
+        sh.angle += sh.speed * settings.speed;
+        // Movimiento radial oscilante
+        sh.radius += Math.sin(sh.angle * 0.5) * 0.5;
+        // Recalcular posición
+        const x = centerX + sh.radius * Math.cos(sh.angle);
+        const y = centerY + sh.radius * Math.sin(sh.angle);
+        ctx.beginPath();
+        ctx.fillStyle = sh.color;
+        ctx.arc(x, y, sh.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Animación principal
+    function animate() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, width, height);
+      // Nivel de micrófono para ajustar velocidad
+      const micLevel = getMicLevel();
+      const micMult = 1 + micLevel * 5;
+      // Dibujar según modo
+      if (settings.mode === 'spheres' || settings.mode === 'original') {
+        drawParticles(micMult);
+      } else if (settings.mode === 'abstract') {
+        drawAbstract();
+      }
+      // Ajustar viento de forma suave
       wind += (targetWind - wind) * 0.05;
       requestAnimationFrame(animate);
     }
-    animate();
 
-    // Event handlers for UI controls.
+    // Inicializar según el modo actual
+    function initMode() {
+      if (settings.mode === 'abstract') {
+        initAbstracts();
+      } else {
+        initParticles();
+      }
+    }
+
+    // Leer ajustes de los controles
+    function updateSettings() {
+      settings.color1 = document.getElementById('color1').value;
+      settings.color2 = document.getElementById('color2').value;
+      settings.speed = parseFloat(document.getElementById('speed').value);
+      settings.height = parseFloat(document.getElementById('height').value);
+      settings.detail = parseInt(document.getElementById('detail').value, 10);
+      // Ajustar partículas/abstractos si cambia el detalle
+      initMode();
+    }
+
+    // Cambiar modo desde el select
+    document.getElementById('modeSelect').addEventListener('change', (e) => {
+      settings.mode = e.target.value;
+      initMode();
+    });
+    // Controles de color, velocidad, altura, detalle
+    document.getElementById('color1').addEventListener('input', updateSettings);
+    document.getElementById('color2').addEventListener('input', updateSettings);
+    document.getElementById('speed').addEventListener('input', updateSettings);
+    document.getElementById('height').addEventListener('input', updateSettings);
+    document.getElementById('detail').addEventListener('input', updateSettings);
+
+    // Micrófono
     document.getElementById('micToggle').addEventListener('change', (e) => {
       if (e.target.checked) {
         initMic();
@@ -202,18 +317,23 @@
         micEnabled = false;
       }
     });
+    // Viento táctil
     document.getElementById('windToggle').addEventListener('change', (e) => {
-      windActive = e.target.checked;
+      settings.windActive = e.target.checked;
     });
     canvas.addEventListener('mousemove', (e) => {
-      if (windActive) {
+      if (settings.windActive) {
         const relativeX = e.clientX / width;
-        targetWind = (relativeX - 0.5) * 5; // Map pointer position to wind range
+        targetWind = (relativeX - 0.5) * 5;
       }
     });
     canvas.addEventListener('mouseleave', () => {
       targetWind = 0;
     });
+
+    // Inicializar con modo por defecto y empezar animación
+    initMode();
+    animate();
   </script>
 </body>
 </html>
