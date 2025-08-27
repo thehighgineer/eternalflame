@@ -1301,43 +1301,48 @@
                 const baseVel = (3 + Math.random() * 1.5) * settings.speed;
                 const dir = settings.direction || 'up';
                 if (dir === 'up') {
-                  // Nace en la parte inferior y sube con velocidad vertical alta
+                  // Nace en la parte inferior y sube recto hacia arriba
                   this.x = Math.random() * width * settings.width;
                   this.y = height + 80;
-                  this.vx = (Math.random() - 0.5) * 0.5;
+                  this.vx = 0;
                   this.vy = -baseVel;
                 } else if (dir === 'down') {
-                  // Nace en la parte superior y baja
+                  // Nace en la parte superior y baja recto hacia abajo
                   this.x = Math.random() * width * settings.width;
                   this.y = -80;
-                  this.vx = (Math.random() - 0.5) * 0.5;
+                  this.vx = 0;
                   this.vy = baseVel;
                 } else if (dir === 'left') {
-                  // Nace en el lado derecho y se mueve hacia la izquierda
+                  // Nace en el lado derecho y se mueve recto hacia la izquierda
                   this.x = width + 80;
                   this.y = Math.random() * height;
                   this.vx = -baseVel;
-                  this.vy = (Math.random() - 0.5) * 0.5;
+                  this.vy = 0;
                 } else if (dir === 'right') {
-                  // Nace en el lado izquierdo y se mueve hacia la derecha
+                  // Nace en el lado izquierdo y se mueve recto hacia la derecha
                   this.x = -80;
                   this.y = Math.random() * height;
                   this.vx = baseVel;
-                  this.vy = (Math.random() - 0.5) * 0.5;
+                  this.vy = 0;
                 } else {
                   // Por defecto: arriba
                   this.x = Math.random() * width * settings.width;
                   this.y = height + 80;
-                  this.vx = (Math.random() - 0.5) * 0.5;
+                  this.vx = 0;
                   this.vy = -baseVel;
                 }
               }
         update(micMult) {
           // Movimiento horizontal influenciado por turbulencia y viento
-          // Reducimos el efecto de la turbulencia para que la dirección tenga
-          // mayor protagonismo. El viento se aplica como desplazamiento constante.
-          this.x += this.vx + wind;
-          this.y += this.vy - micMult * 2;
+          // Aplicar movimiento según la dirección: en horizontal aplicar el viento,
+          // en vertical omitir el viento para evitar diagonales.
+          if (settings.direction === 'left' || settings.direction === 'right') {
+            this.x += this.vx + wind;
+            this.y += this.vy - micMult * 2;
+          } else {
+            this.x += this.vx;
+            this.y += this.vy - micMult * 2;
+          }
           this.life++;
           if (this.life > this.ttl || this.y < -50) {
             this.reset();
@@ -1360,33 +1365,40 @@
                if (dirC === 'up') {
                  this.x = Math.random() * width * settings.width;
                  this.y = height + 80;
-                 this.vx = (Math.random() - 0.5) * 0.5;
+                 this.vx = 0;
                  this.vy = -baseVel;
                } else if (dirC === 'down') {
                  this.x = Math.random() * width * settings.width;
                  this.y = -80;
-                 this.vx = (Math.random() - 0.5) * 0.5;
+                 this.vx = 0;
                  this.vy = baseVel;
                } else if (dirC === 'left') {
                  this.x = width + 80;
                  this.y = Math.random() * height;
                  this.vx = -baseVel;
-                 this.vy = (Math.random() - 0.5) * 0.5;
+                 this.vy = 0;
                } else if (dirC === 'right') {
                  this.x = -80;
                  this.y = Math.random() * height;
                  this.vx = baseVel;
-                 this.vy = (Math.random() - 0.5) * 0.5;
+                 this.vy = 0;
                } else {
                  this.x = Math.random() * width * settings.width;
                  this.y = height + 80;
-                 this.vx = (Math.random() - 0.5) * 0.5;
+                 this.vx = 0;
                  this.vy = -baseVel;
                }
              }
         update(micMult) {
-          this.x += this.vx + wind * 0.5;
-          this.y += this.vy - micMult * 2;
+          // Para las direcciones horizontales aplicamos el viento; en vertical
+          // omitimos el viento para evitar movimientos diagonales visibles.
+          if (settings.direction === 'left' || settings.direction === 'right') {
+            this.x += this.vx + wind * 0.5;
+            this.y += this.vy - micMult * 2;
+          } else {
+            this.x += this.vx;
+            this.y += this.vy - micMult * 2;
+          }
           this.life++;
           if (this.life > this.ttl || this.y < -50) {
             this.reset();
@@ -1517,7 +1529,7 @@
           // Use the speed slider to influence translation speed; scale factor
           // Ajustamos el desplazamiento para que la dirección sea más evidente en
           // el modo abstracto. Un factor más alto produce un movimiento visible.
-          const shift = settings.speed * 5;
+          const shift = settings.speed * 10;
           if (dir === 'left') abstractOffsetX -= shift;
           else if (dir === 'right') abstractOffsetX += shift;
           if (dir === 'up') abstractOffsetY -= shift;
