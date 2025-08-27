@@ -59,7 +59,6 @@
       <option value="abstract">Abstracto</option>
       <option value="custom">Personalizado</option>
       <option value="bars">Barras</option>
-      <option value="3d">3D</option>
     </select>
   </div>
 
@@ -105,16 +104,6 @@
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Turbulencia</label>
         <input type="range" id="turb2d" min="0" max="2" step="0.1" value="0" class="w-44" />
-      </div>
-      <!-- Dirección de movimiento para partículas 2D -->
-      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
-        <label class="text-xs opacity-80">Dirección</label>
-        <select id="direction2d" class="bg-black/60 text-white rounded-md border border-white/30 px-2 py-1 w-44">
-          <option value="up" selected>Arriba</option>
-          <option value="down">Abajo</option>
-          <option value="left">Izquierda</option>
-          <option value="right">Derecha</option>
-        </select>
       </div>
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Cantidad</label>
@@ -253,10 +242,7 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Three.js and its loaders for 3D model support -->
-  <script src="https://unpkg.com/three@0.156.1/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.156.1/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://unpkg.com/three@0.156.1/examples/js/loaders/OBJLoader.js"></script>
+  <!-- Se eliminan las dependencias de Three.js y sus cargadores porque el modo 3D ya no está disponible -->
 
   <script type="text/babel">
     /*
@@ -956,8 +942,6 @@
         size: 1,
         glow: 1,
         windConst: 0,
-        // Dirección del movimiento de las partículas (up, down, left, right)
-        direction: 'up',
         image: null,
         micSensitivity: 1,
         pointerWind: false,
@@ -1320,53 +1304,23 @@
                 this.radius = 10 + Math.random() * 20;
                 this.life = 0;
                 this.ttl = (60 + Math.random() * 80) * settings.height;
-                // Velocidad base más alta para que el cambio de dirección sea
-                // evidente. Ajustamos según la velocidad global.
+                // Reset particles to always originate from the bottom of the canvas
+                // and travel straight upward. Random horizontal drift is provided
+                // via the turbulence/width settings rather than directional flags.
                 const baseVel = (3 + Math.random() * 1.5) * settings.speed;
-                const dir = settings.direction || 'up';
-                if (dir === 'up') {
-                  // Nace en la parte inferior y sube recto hacia arriba
-                  this.x = Math.random() * width * settings.width;
-                  this.y = height + 80;
-                  this.vx = 0;
-                  this.vy = -baseVel;
-                } else if (dir === 'down') {
-                  // Nace en la parte superior y baja recto hacia abajo
-                  this.x = Math.random() * width * settings.width;
-                  this.y = -80;
-                  this.vx = 0;
-                  this.vy = baseVel;
-                } else if (dir === 'left') {
-                  // Nace en el lado derecho y se mueve recto hacia la izquierda
-                  this.x = width + 80;
-                  this.y = Math.random() * height;
-                  this.vx = -baseVel;
-                  this.vy = 0;
-                } else if (dir === 'right') {
-                  // Nace en el lado izquierdo y se mueve recto hacia la derecha
-                  this.x = -80;
-                  this.y = Math.random() * height;
-                  this.vx = baseVel;
-                  this.vy = 0;
-                } else {
-                  // Por defecto: arriba
-                  this.x = Math.random() * width * settings.width;
-                  this.y = height + 80;
-                  this.vx = 0;
-                  this.vy = -baseVel;
-                }
+                this.x = Math.random() * width * settings.width;
+                // spawn just below the visible area so particles rise into view
+                this.y = height + 80;
+                // random horizontal velocity influenced by turbulence
+                this.vx = (Math.random() - 0.5) * settings.turb;
+                // vertical velocity is always upward (negative)
+                this.vy = -baseVel;
               }
         update(micMult) {
-          // Movimiento horizontal influenciado por turbulencia y viento
-          // Aplicar movimiento según la dirección: en horizontal aplicar el viento,
-          // en vertical omitir el viento para evitar diagonales.
-          if (settings.direction === 'left' || settings.direction === 'right') {
-            this.x += this.vx + wind;
-            this.y += this.vy - micMult * 2;
-          } else {
-            this.x += this.vx;
-            this.y += this.vy - micMult * 2;
-          }
+          // Update position using stored velocities and global wind. All particles
+          // travel upward; horizontal drift is applied via vx and wind.
+          this.x += this.vx + wind;
+          this.y += this.vy - micMult * 2;
           this.life++;
           if (this.life > this.ttl || this.y < -50) {
             this.reset();
@@ -1384,45 +1338,17 @@
                this.radius = 10 + Math.random() * 20;
                this.life = 0;
                this.ttl = (60 + Math.random() * 80) * settings.height;
+               // Custom particles always spawn at the bottom and rise upward.
                const baseVel = (3 + Math.random() * 1.5) * settings.speed;
-               const dirC = settings.direction || 'up';
-               if (dirC === 'up') {
-                 this.x = Math.random() * width * settings.width;
-                 this.y = height + 80;
-                 this.vx = 0;
-                 this.vy = -baseVel;
-               } else if (dirC === 'down') {
-                 this.x = Math.random() * width * settings.width;
-                 this.y = -80;
-                 this.vx = 0;
-                 this.vy = baseVel;
-               } else if (dirC === 'left') {
-                 this.x = width + 80;
-                 this.y = Math.random() * height;
-                 this.vx = -baseVel;
-                 this.vy = 0;
-               } else if (dirC === 'right') {
-                 this.x = -80;
-                 this.y = Math.random() * height;
-                 this.vx = baseVel;
-                 this.vy = 0;
-               } else {
-                 this.x = Math.random() * width * settings.width;
-                 this.y = height + 80;
-                 this.vx = 0;
-                 this.vy = -baseVel;
-               }
+               this.x = Math.random() * width * settings.width;
+               this.y = height + 80;
+               this.vx = (Math.random() - 0.5) * settings.turb;
+               this.vy = -baseVel;
              }
         update(micMult) {
-          // Para las direcciones horizontales aplicamos el viento; en vertical
-          // omitimos el viento para evitar movimientos diagonales visibles.
-          if (settings.direction === 'left' || settings.direction === 'right') {
-            this.x += this.vx + wind * 0.5;
-            this.y += this.vy - micMult * 2;
-          } else {
-            this.x += this.vx;
-            this.y += this.vy - micMult * 2;
-          }
+          // Apply horizontal drift and wind to custom particles as they rise.
+          this.x += this.vx + wind * 0.5;
+          this.y += this.vy - micMult * 2;
           this.life++;
           if (this.life > this.ttl || this.y < -50) {
             this.reset();
@@ -1500,14 +1426,11 @@
         for (const sh of abstracts) {
           sh.angle += sh.speed * settings.speed;
           sh.radius += Math.sin(sh.angle * 0.5) * 0.5;
-        // Apply the directional offsets accumulated in animate() to shift the
-        // pattern horizontally or vertically. This gives control over
-        // movement direction in abstract mode (similar to spheres and custom).
-        const x = cx + sh.radius * Math.cos(sh.angle) + abstractOffsetX;
-        const y = cy + sh.radius * Math.sin(sh.angle) + abstractOffsetY;
+          // Draw shapes orbiting around the center without directional offsets.
+          const x = cx + sh.radius * Math.cos(sh.angle);
+          const y = cy + sh.radius * Math.sin(sh.angle);
           const s = sh.size * settings.size * micMult;
           ctx.beginPath();
-          // Invertir colores de cada forma en beat
           const fillCol = beat ? invertColor(sh.color) : sh.color;
           ctx.fillStyle = fillCol;
           ctx.arc(x, y, s, 0, Math.PI * 2);
@@ -1558,7 +1481,8 @@
           // Determinar altura de la barra basada en el nivel de micrófono y factores de usuario
           // Añadir un valor base (0.05) para que las barras sean visibles incluso sin audio
           // Usamos un factor de escala mayor (400) para que las barras ocupen una parte significativa del lienzo
-          const amp = (micLevelLocal + 0.05) * settings.height * 400 * (0.5 + Math.random() * 0.5);
+          // Increase the bar height significantly to make the visual impact stronger
+          const amp = (micLevelLocal + 0.05) * settings.height * 800 * (0.5 + Math.random() * 0.5);
           const barHeight = Math.min(height, amp);
           const xPos = i * bw + bw * 0.1;
           const barW = bw * 0.8;
@@ -1575,43 +1499,19 @@
         ctx.fillStyle = settings.themeLight ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
         ctx.fillRect(0, 0, width, height);
 
-        let micLevel, micMult, beat;
-        if (settings.mode === '3d') {
-          micLevel = getMicLevel3d();
-          micMult = 1 + micLevel * 5 * settings3d.micSensitivity;
-          beat = micLevel * settings3d.micSensitivity > 0.12;
-          draw3d(micMult, beat);
-        } else {
-          // Update offset translation for abstract mode and other 2D modes based
-          // on the selected direction. This creates a feeling of movement
-          // sideways or vertically for abstract shapes by shifting the entire
-          // pattern. The offset wraps around the canvas dimensions.
-          const dir = settings.direction;
-          // Use the speed slider to influence translation speed; scale factor
-          // Ajustamos el desplazamiento para que la dirección sea más evidente en
-          // el modo abstracto. Un factor más alto produce un movimiento visible.
-          const shift = settings.speed * 10;
-          if (dir === 'left') abstractOffsetX -= shift;
-          else if (dir === 'right') abstractOffsetX += shift;
-          if (dir === 'up') abstractOffsetY -= shift;
-          else if (dir === 'down') abstractOffsetY += shift;
-          // Wrap offsets within the canvas bounds
-          if (abstractOffsetX > width) abstractOffsetX = -width;
-          if (abstractOffsetX < -width) abstractOffsetX = width;
-          if (abstractOffsetY > height) abstractOffsetY = -height;
-          if (abstractOffsetY < -height) abstractOffsetY = height;
-          micLevel = getMicLevel();
-          micMult = 1 + micLevel * 10 * settings.micSensitivity;
-          beat = micLevel * settings.micSensitivity > 0.12;
-          if (settings.mode === 'spheres') {
-            drawParticles(micMult, beat);
-          } else if (settings.mode === 'abstract') {
-            drawAbstract(micMult, beat);
-          } else if (settings.mode === 'custom') {
-            drawCustom(micMult, beat);
-          } else if (settings.mode === 'bars') {
-            drawBars(micMult, beat);
-          }
+        // Always compute audio values for 2D visualizers
+        const micLevel = getMicLevel();
+        const micMult = 1 + micLevel * 10 * settings.micSensitivity;
+        const beat = micLevel * settings.micSensitivity > 0.12;
+        // Draw the appropriate 2D visualizer based on the selected mode
+        if (settings.mode === 'spheres') {
+          drawParticles(micMult, beat);
+        } else if (settings.mode === 'abstract') {
+          drawAbstract(micMult, beat);
+        } else if (settings.mode === 'custom') {
+          drawCustom(micMult, beat);
+        } else if (settings.mode === 'bars') {
+          drawBars(micMult, beat);
         }
 
         // Ajustar viento objetivo según drift o puntero
@@ -1651,8 +1551,6 @@
           initCustom();
         } else if (settings.mode === 'bars') {
           initBars();
-        } else if (settings.mode === '3d') {
-          init3d();
         }
       }
 
@@ -1673,39 +1571,12 @@
         settings.grain = document.getElementById('grainToggle').checked;
         settings.drift = document.getElementById('driftToggle').checked;
         settings.themeLight = document.getElementById('lightToggle').checked;
-        // Actualizar dirección si existe el selector
-        if (document.getElementById('direction2d')) {
-          settings.direction = document.getElementById('direction2d').value;
-        }
         // Reinitialize based on new settings
         initMode();
         // Update canvas background according to theme
         const canvasEl = document.getElementById('canvas2d');
         if (canvasEl) {
           canvasEl.style.backgroundColor = settings.themeLight ? '#ffffff' : '#000000';
-          // Apply rotation based on direction for 2D modes (spheres, abstract, custom, bars)
-          const modesForRotation = ['spheres', 'abstract', 'custom', 'bars'];
-          if (modesForRotation.includes(settings.mode)) {
-            let angle = 0;
-            switch (settings.direction) {
-              case 'down':
-                angle = 180;
-                break;
-              case 'left':
-                angle = -90;
-                break;
-              case 'right':
-                angle = 90;
-                break;
-              default:
-                angle = 0;
-            }
-            canvasEl.style.transform = 'rotate(' + angle + 'deg)';
-            canvasEl.style.transformOrigin = 'center center';
-          } else {
-            // Reset any rotation when switching away from 2D modes
-            canvasEl.style.transform = '';
-          }
         }
       }
 
@@ -1726,9 +1597,7 @@
       document.getElementById('grainToggle').addEventListener('change', updateSettings);
       document.getElementById('driftToggle').addEventListener('change', updateSettings);
       document.getElementById('lightToggle').addEventListener('change', updateSettings);
-      if (document.getElementById('direction2d')) {
-        document.getElementById('direction2d').addEventListener('change', updateSettings);
-      }
+      // El selector de dirección se ha eliminado; no se requiere escucha
 
       // Ajustar resolución (rendimiento) cambiando el factor de densidad de píxeles
       document.getElementById('pixel2d').addEventListener('input', (e) => {
@@ -2197,36 +2066,17 @@
         document.getElementById('flame-wrapper').style.display = 'block';
         ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
         isReactMounted = true;
-      } else if (modeSelect.value === '3d') {
-        // Mostrar modo 3D al cargar
-        document.getElementById('flame-wrapper').style.display = 'none';
-        // Ocultar controles de 2D
-        document.getElementById('controls2d').style.display = 'none';
-        document.getElementById('controls2dCollapsed').style.display = 'none';
-        // Ocultar lienzo 2D
-        document.getElementById('canvas2d').style.display = 'none';
-        // Mostrar contenedor de Three.js
-        document.getElementById('threeContainer').style.display = 'block';
-        document.getElementById('controls3d').style.display = 'block';
-        document.getElementById('controls3dCollapsed').style.display = 'none';
-        // Cambiar a modo 3D en el motor 2D/3D
-        window._update2dMode('3d');
-        // Inicializar clones 3D
-        if (typeof window.init3d === 'function') {
-          window.init3d();
-        }
-        if (typeof THREE !== 'undefined') {
-          createClones3d();
-        }
       } else {
+        // Mostrar modos 2D (esferas, abstracto, personalizado, barras)
         document.getElementById('flame-wrapper').style.display = 'none';
+        // Ocultar el contenedor Three.js y sus paneles, ya que el modo 3D se ha eliminado
         document.getElementById('threeContainer').style.display = 'none';
         document.getElementById('controls3d').style.display = 'none';
         document.getElementById('controls3dCollapsed').style.display = 'none';
         document.getElementById('canvas2d').style.display = 'block';
         document.getElementById('controls2d').style.display = 'block';
         document.getElementById('controls2dCollapsed').style.display = 'none';
-        // Inicializa el modo 2D seleccionado (incluyendo 'custom')
+        // Inicializa el modo 2D seleccionado (incluyendo 'custom' y 'bars')
         window._update2dMode(modeSelect.value);
       }
     })();
