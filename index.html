@@ -26,6 +26,27 @@
     #controls2d input[type="checkbox"] {
       margin-left: 4px;
     }
+
+    /* Unify the appearance of the original WebGL panel to match the 2D/3D panels */
+    /* Override dark/light backgrounds to a consistent backdrop */
+    #flame-wrapper .bg-slate-900\/80,
+    #flame-wrapper .bg-white\/80 {
+      background-color: rgba(0, 0, 0, 0.8) !important;
+    }
+    /* Harmonize border colors */
+    #flame-wrapper .border-white\/10,
+    #flame-wrapper .border-black\/10 {
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    /* Harmonize text colors */
+    #flame-wrapper .text-slate-100,
+    #flame-wrapper .text-neutral-900 {
+      color: #f5f5f5 !important;
+    }
+    /* Slightly smaller header in original panel */
+    #flame-wrapper h1 {
+      font-size: 0.9rem !important;
+    }
   </style>
 </head>
 <body class="bg-black text-white">
@@ -48,167 +69,167 @@
   <canvas id="canvas2d"></canvas>
 
   <!-- Panel de control para modos 2D -->
-  <div id="controls2d" class="absolute top-12 left-2 z-20 bg-black/70 backdrop-blur px-4 py-3 rounded-lg border border-white/20 w-64" style="display:block;">
-    <div class="mb-2">
-      <label>Color 1
-        <input type="color" id="color1" class="align-middle" value="#fdcc0d" />
-      </label>
+  <!-- Unified control panel for 2D modes (esferas/abstracto/personalizado) -->
+  <div id="controls2d" class="absolute right-3 top-3 z-20 w-[min(92vw,380px)] max-h-[calc(100%-24px)] rounded-2xl border shadow-xl backdrop-blur overflow-auto" style="display:block;">
+    <!-- Header with title and hide button -->
+    <div class="flex items-center justify-between px-3 py-2 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <h1 class="text-sm font-semibold tracking-wide">Visualizador 2D</h1>
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full" style="background: #fdcc0d; color: #111;">Live</span>
+      </div>
+      <button id="hidePanel2d" class="text-xs px-2 py-1 rounded-md border border-white/10 bg-white/10 hover:bg-white/20">Ocultar</button>
     </div>
-    <div class="mb-2">
-      <label>Color 2
-        <input type="color" id="color2" class="align-middle" value="#32527b" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Velocidad
-        <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Altura
-        <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Anchura
-        <input type="range" id="width2d" min="0.5" max="3" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Turbulencia
-        <input type="range" id="turb2d" min="0" max="2" step="0.1" value="0" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Cantidad
-        <input type="range" id="count" min="10" max="1000" step="10" value="200" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Tamaño
-        <input type="range" id="size" min="0.5" max="3" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Resplandor
-        <input type="range" id="glow" min="0" max="5" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Viento constante
-        <input type="range" id="windConst" min="-2" max="2" step="0.1" value="0" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2" id="customImageWrapper" style="display:none;">
-      <label>Imagen
-        <input type="file" id="customImage" accept="image/png" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Micrófono
-        <input type="checkbox" id="micToggle" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Sensib. mic
-        <input type="range" id="micSens2d" min="0" max="2" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Viento táctil
-        <input type="checkbox" id="windToggle" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Granulado
-        <input type="checkbox" id="grainToggle" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Auto drift
-        <input type="checkbox" id="driftToggle" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Tema claro
-        <input type="checkbox" id="lightToggle" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <button id="hidePanel2d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Ocultar panel</button>
+    <div class="p-3 space-y-2">
+      <!-- Color pickers: four colors -->
+      <div class="grid grid-cols-[1fr_repeat(4,auto)] items-center gap-2">
+        <label class="text-xs opacity-80">Colores</label>
+        <input type="color" id="color1" value="#fdcc0d" />
+        <input type="color" id="color2" value="#32527b" />
+        <input type="color" id="color3" value="#fd6a00" />
+        <input type="color" id="color4" value="#ffd26a" />
+      </div>
+      <!-- Sliders for behaviour -->
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Velocidad</label>
+        <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Altura</label>
+        <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Anchura</label>
+        <input type="range" id="width2d" min="0.5" max="3" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Turbulencia</label>
+        <input type="range" id="turb2d" min="0" max="2" step="0.1" value="0" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Cantidad</label>
+        <input type="range" id="count" min="10" max="1000" step="10" value="200" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Tamaño</label>
+        <input type="range" id="size" min="0.5" max="3" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Resplandor</label>
+        <input type="range" id="glow" min="0" max="5" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Viento constante</label>
+        <input type="range" id="windConst" min="-2" max="2" step="0.1" value="0" class="w-44" />
+      </div>
+      <!-- Custom image upload (only visible in personalizado mode) -->
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3" id="customImageWrapper" style="display:none;">
+        <label class="text-xs opacity-80">Imagen</label>
+        <input type="file" id="customImage" accept="image/png" class="w-44" />
+      </div>
+      <!-- Toggles -->
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Micrófono</label>
+        <input type="checkbox" id="micToggle" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Sensib. mic</label>
+        <input type="range" id="micSens2d" min="0" max="2" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Viento táctil</label>
+        <input type="checkbox" id="windToggle" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Granulado</label>
+        <input type="checkbox" id="grainToggle" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Auto drift</label>
+        <input type="checkbox" id="driftToggle" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Tema claro</label>
+        <input type="checkbox" id="lightToggle" />
+      </div>
+
+      <!-- Rendimiento / pixel density slider -->
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Rendimiento</label>
+        <input type="range" id="pixel2d" min="0.5" max="2" step="0.05" value="1" class="w-44" />
+      </div>
+      <!-- Buttons for randomizing and sharing settings -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="randomize2d" class="text-xs rounded-lg px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20">Aleatorizar</button>
+        <button id="share2d" class="text-xs rounded-lg px-3 py-2 border border-white/10 bg-white/10 hover:bg-white/20">Compartir</button>
+      </div>
     </div>
   </div>
-  <div id="controls2dCollapsed" class="absolute top-12 left-2 z-20" style="display:none;">
-    <button id="showPanel2d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
+  <div id="controls2dCollapsed" class="absolute right-3 top-3 z-20" style="display:none;">
+    <button id="showPanel2d" class="text-xs px-3 py-2 rounded-md border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
   </div>
 
   <!-- Contenedor para modo 3D y su panel de control -->
   <div id="threeContainer" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;"></div>
-    <div id="controls3d" class="absolute top-12 left-2 z-20 bg-black/70 backdrop-blur px-4 py-3 rounded-lg border border-white/20 w-64" style="display:none;">
-    <div class="mb-2">
-      <label>Modelo
-        <input type="file" id="modelFile" accept=".glb,.gltf,.obj" class="align-middle" />
-      </label>
+  <!-- Unified control panel for 3D mode -->
+  <div id="controls3d" class="absolute right-3 top-3 z-20 w-[min(92vw,380px)] max-h-[calc(100%-24px)] rounded-2xl border shadow-xl backdrop-blur overflow-auto" style="display:none;">
+    <!-- Header with title and hide button -->
+    <div class="flex items-center justify-between px-3 py-2 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <h1 class="text-sm font-semibold tracking-wide">Visualizador 3D</h1>
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full" style="background: #fdcc0d; color: #111;">Live</span>
+      </div>
+      <button id="hidePanel3d" class="text-xs px-2 py-1 rounded-md border border-white/10 bg-white/10 hover:bg-white/20">Ocultar</button>
     </div>
-    <div class="mb-2">
-      <label>Color
-        <input type="color" id="color3d" class="align-middle" value="#ffffff" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Clones
-        <input type="range" id="count3d" min="1" max="50" step="1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Escala
-        <input type="range" id="scale3d" min="0.1" max="3" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Vel. rotación
-        <input type="range" id="speed3d" min="-3" max="3" step="0.05" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Separación
-        <input type="range" id="spread3d" min="0" max="10" step="0.2" value="2" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Micrófono
-        <input type="checkbox" id="mic3d" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Sensib. mic
-        <input type="range" id="micSens3d" min="0" max="2" step="0.1" value="1" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Viento
-        <input type="range" id="wind3d" min="-2" max="2" step="0.1" value="0" class="w-36" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Auto drift
-        <input type="checkbox" id="drift3d" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <label>Tema claro
-        <input type="checkbox" id="light3d" class="align-middle" />
-      </label>
-    </div>
-    <div class="mb-2">
-      <button id="hidePanel3d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Ocultar panel</button>
-    </div>
+    <div class="p-3 space-y-2">
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Modelo</label>
+        <input type="file" id="modelFile" accept=".obj" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Color</label>
+        <input type="color" id="color3d" value="#ffffff" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Clones</label>
+        <input type="range" id="count3d" min="1" max="50" step="1" value="5" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Escala</label>
+        <input type="range" id="scale3d" min="0.1" max="3" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Vel. rotación</label>
+        <input type="range" id="speed3d" min="-3" max="3" step="0.05" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Separación</label>
+        <input type="range" id="spread3d" min="0" max="10" step="0.2" value="2" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Micrófono</label>
+        <input type="checkbox" id="mic3d" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Sensib. mic</label>
+        <input type="range" id="micSens3d" min="0" max="2" step="0.1" value="1" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Viento</label>
+        <input type="range" id="wind3d" min="-2" max="2" step="0.1" value="0" class="w-44" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Auto drift</label>
+        <input type="checkbox" id="drift3d" />
+      </div>
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Tema claro</label>
+        <input type="checkbox" id="light3d" />
+      </div>
     </div>
   </div>
-
-  <!-- Panel colapsado para 3D (fuera del panel principal) -->
-  <div id="controls3dCollapsed" class="absolute top-12 left-2 z-20" style="display:none;">
-    <button id="showPanel3d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
+  <!-- Collapsed panel button for 3D mode -->
+  <div id="controls3dCollapsed" class="absolute right-3 top-3 z-20" style="display:none;">
+    <button id="showPanel3d" class="text-xs px-3 py-2 rounded-md border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
   </div>
 
   <!-- La versión 3D se implementa a mano sin dependencias externas para evitar problemas de carga. -->
@@ -905,6 +926,9 @@
         mode: 'spheres',
         color1: '#fdcc0d',
         color2: '#32527b',
+        // Nuevos colores para gradientes de 4 puntos
+        color3: '#fd6a00',
+        color4: '#ffd26a',
         speed: 1,
         height: 1,
         width: 1,
@@ -940,6 +964,8 @@
         themeLight: false // tema claro/oscuro para 3D
       };
       let clones3d = [];
+      // Placeholder for loaded OBJ geometry. When null, spheres will be drawn.
+      let modelGeometry3d = null;
       let micCtx3d = null;
       let micAnalyser3d = null;
       let micData3d = null;
@@ -950,6 +976,60 @@
         const num = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
         const inv = 0xffffff ^ num;
         return '#' + inv.toString(16).padStart(6, '0');
+      }
+
+      // Parse a simple OBJ file (only vertices and faces). Returns normalized geometry.
+      function parseOBJ(text) {
+        const vertices = [];
+        const faces = [];
+        const lines = text.split(/[\r\n]+/);
+        lines.forEach((line) => {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length === 0) return;
+          if (parts[0] === 'v' && parts.length >= 4) {
+            const x = parseFloat(parts[1]);
+            const y = parseFloat(parts[2]);
+            const z = parseFloat(parts[3]);
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) vertices.push([x, y, z]);
+          } else if (parts[0] === 'f' && parts.length >= 4) {
+            const idx = parts.slice(1).map((p) => {
+              const n = p.split('/')[0];
+              return parseInt(n, 10) - 1;
+            }).filter((i) => !isNaN(i));
+            if (idx.length >= 3) {
+              for (let i = 1; i < idx.length - 1; i++) {
+                faces.push([idx[0], idx[i], idx[i + 1]]);
+              }
+            }
+          }
+        });
+        if (vertices.length === 0 || faces.length === 0) {
+          return null;
+        }
+        // Center and scale to fit within unit cube
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+        vertices.forEach((v) => {
+          if (v[0] < minX) minX = v[0];
+          if (v[0] > maxX) maxX = v[0];
+          if (v[1] < minY) minY = v[1];
+          if (v[1] > maxY) maxY = v[1];
+          if (v[2] < minZ) minZ = v[2];
+          if (v[2] > maxZ) maxZ = v[2];
+        });
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        const cz = (minZ + maxZ) / 2;
+        const dx = maxX - minX;
+        const dy = maxY - minY;
+        const dz = maxZ - minZ;
+        const scale = 1 / Math.max(dx, dy, dz || 1);
+        const normVertices = vertices.map((v) => [
+          (v[0] - cx) * scale,
+          (v[1] - cy) * scale,
+          (v[2] - cz) * scale,
+        ]);
+        return { vertices: normVertices, faces };
       }
       // Inicializar micrófono para 3D
       function initMic3d() {
@@ -985,51 +1065,163 @@
       }
       // Dibujar los clones 3D con perspectiva simple
       function draw3d(micMult, beat) {
-        // Fondo
+        // Fondo según tema
         ctx.fillStyle = settings3d.themeLight ? '#ffffff' : '#000000';
         ctx.fillRect(0, 0, width, height);
-        const baseSize = 40 * settings3d.scale;
         const radius = settings3d.spread;
         const time = Date.now() * 0.001;
         const colorNorm = settings3d.color;
         const colorBeat = invertColor3D(colorNorm);
-        clones3d.forEach((clone) => {
-          const total = Math.max(1, settings3d.count);
-          const angle = (clone.index / total) * Math.PI * 2 + time * settings3d.speed;
-          // Posición base
-          let x = Math.cos(angle) * radius;
-          let y = 0;
-          let z = Math.sin(angle) * radius;
-          // Aplicar viento (rotación en X)
-          const wx = settings3d.wind * Math.PI;
-          const cosx = Math.cos(wx);
-          const sinx = Math.sin(wx);
-          const y2 = y * cosx - z * sinx;
-          const z2 = y * sinx + z * cosx;
-          y = y2;
-          z = z2;
-          // Ajustar escala por profundidad y micrófono
+        // Si hay geometría de modelo cargada, dibujar polígonos; de lo contrario, esferas
+        if (modelGeometry3d && modelGeometry3d.vertices && modelGeometry3d.faces) {
           const d = 6;
-          const perspective = d / (z + d);
-          const size2d = baseSize * perspective * micMult;
-          const px = (x * perspective) * 200 + width / 2;
-          const py = (y * perspective) * 200 + height / 2;
-          // Color y glow
-          const col = beat ? colorBeat : colorNorm;
-          const grd = ctx.createRadialGradient(px, py, 0, px, py, size2d);
-          const rgb = col.replace('#', '');
-          const r = parseInt(rgb.substring(0, 2), 16);
-          const g = parseInt(rgb.substring(2, 4), 16);
-          const b = parseInt(rgb.substring(4, 6), 16);
-          const colorStart = `rgba(${r},${g},${b},1)`;
-          const colorEnd = `rgba(${r},${g},${b},0)`;
-          grd.addColorStop(0, colorStart);
-          grd.addColorStop(1, colorEnd);
-          ctx.fillStyle = grd;
-          ctx.beginPath();
-          ctx.arc(px, py, size2d, 0, Math.PI * 2);
-          ctx.fill();
-        });
+          const allFaces = [];
+          const total = Math.max(1, settings3d.count);
+          // Precalcular base color RGB
+          const rgbNorm = colorNorm.replace('#', '');
+          const baseR = parseInt(rgbNorm.substring(0, 2), 16);
+          const baseG = parseInt(rgbNorm.substring(2, 4), 16);
+          const baseB = parseInt(rgbNorm.substring(4, 6), 16);
+          const rgbBeat = colorBeat.replace('#', '');
+          const beatR = parseInt(rgbBeat.substring(0, 2), 16);
+          const beatG = parseInt(rgbBeat.substring(2, 4), 16);
+          const beatB = parseInt(rgbBeat.substring(4, 6), 16);
+          for (let ci = 0; ci < clones3d.length; ci++) {
+            const clone = clones3d[ci];
+            const angle = (clone.index / total) * Math.PI * 2 + time * settings3d.speed;
+            // Posición del clon en el círculo
+            let cxp = Math.cos(angle) * radius;
+            let cyp = 0;
+            let czp = Math.sin(angle) * radius;
+            // Aplicar viento (rotación en X)
+            const wx = settings3d.wind * Math.PI;
+            const cosx = Math.cos(wx);
+            const sinx = Math.sin(wx);
+            const y2 = cyp * cosx - czp * sinx;
+            const z2 = cyp * sinx + czp * cosx;
+            cyp = y2;
+            czp = z2;
+            // Procesar cada cara del modelo
+            const vList = modelGeometry3d.vertices;
+            const fList = modelGeometry3d.faces;
+            const scale = settings3d.scale * micMult;
+            for (let fi = 0; fi < fList.length; fi++) {
+              const face = fList[fi];
+              const v1 = vList[face[0]];
+              const v2 = vList[face[1]];
+              const v3 = vList[face[2]];
+              // Calcular posiciones en el mundo
+              const w1x = cxp + v1[0] * scale;
+              const w1y = cyp + v1[1] * scale;
+              const w1z = czp + v1[2] * scale;
+              const w2x = cxp + v2[0] * scale;
+              const w2y = cyp + v2[1] * scale;
+              const w2z = czp + v2[2] * scale;
+              const w3x = cxp + v3[0] * scale;
+              const w3y = cyp + v3[1] * scale;
+              const w3z = czp + v3[2] * scale;
+              // Normal del triángulo (usada para sombreado)
+              const ux = w2x - w1x;
+              const uy = w2y - w1y;
+              const uz = w2z - w1z;
+              const vx = w3x - w1x;
+              const vy = w3y - w1y;
+              const vz = w3z - w1z;
+              const nx = uy * vz - uz * vy;
+              const ny = uz * vx - ux * vz;
+              const nz = ux * vy - uy * vx;
+              // Evitar caras traseras (culling básico)
+              if (nz <= 0) continue;
+              const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+              const nzNorm = nz / len;
+              // Proyección perspectiva
+              const p1 = {};
+              const p2 = {};
+              const p3 = {};
+              const pr1 = d / (w1z + d);
+              const pr2 = d / (w2z + d);
+              const pr3 = d / (w3z + d);
+              p1.x = (w1x * pr1) * 200 + width / 2;
+              p1.y = (w1y * pr1) * 200 + height / 2;
+              p1.z = w1z;
+              p2.x = (w2x * pr2) * 200 + width / 2;
+              p2.y = (w2y * pr2) * 200 + height / 2;
+              p2.z = w2z;
+              p3.x = (w3x * pr3) * 200 + width / 2;
+              p3.y = (w3y * pr3) * 200 + height / 2;
+              p3.z = w3z;
+              // Calcular z medio para ordenar profundidad
+              const zAvg = (w1z + w2z + w3z) / 3;
+              // Calcular sombreado simple basado en normal z
+              const shade = 0.5 + 0.5 * nzNorm;
+              let rBase, gBase, bBase;
+              if (beat) {
+                rBase = beatR;
+                gBase = beatG;
+                bBase = beatB;
+              } else {
+                rBase = baseR;
+                gBase = baseG;
+                bBase = baseB;
+              }
+              const r = Math.min(255, Math.max(0, Math.round(rBase * shade)));
+              const g = Math.min(255, Math.max(0, Math.round(gBase * shade)));
+              const b = Math.min(255, Math.max(0, Math.round(bBase * shade)));
+              allFaces.push({ p1, p2, p3, z: zAvg, color: `rgb(${r},${g},${b})` });
+            }
+          }
+          // Ordenar caras desde el fondo hacia el frente
+          allFaces.sort((a, b) => b.z - a.z);
+          allFaces.forEach((f) => {
+            ctx.fillStyle = f.color;
+            ctx.beginPath();
+            ctx.moveTo(f.p1.x, f.p1.y);
+            ctx.lineTo(f.p2.x, f.p2.y);
+            ctx.lineTo(f.p3.x, f.p3.y);
+            ctx.closePath();
+            ctx.fill();
+          });
+        } else {
+          // Dibujar esferas simples cuando no hay modelo cargado
+          const baseSize = 40 * settings3d.scale;
+          const total = Math.max(1, settings3d.count);
+          clones3d.forEach((clone) => {
+            const angle = (clone.index / total) * Math.PI * 2 + time * settings3d.speed;
+            // Posición base
+            let x = Math.cos(angle) * radius;
+            let y = 0;
+            let z = Math.sin(angle) * radius;
+            // Aplicar viento (rotación en X)
+            const wx = settings3d.wind * Math.PI;
+            const cosx = Math.cos(wx);
+            const sinx = Math.sin(wx);
+            const y2b = y * cosx - z * sinx;
+            const z2b = y * sinx + z * cosx;
+            y = y2b;
+            z = z2b;
+            // Ajustar escala por profundidad y micrófono
+            const d2 = 6;
+            const perspective = d2 / (z + d2);
+            const size2d = baseSize * perspective * micMult;
+            const px = (x * perspective) * 200 + width / 2;
+            const py = (y * perspective) * 200 + height / 2;
+            // Color y glow
+            const col = beat ? colorBeat : colorNorm;
+            const grd = ctx.createRadialGradient(px, py, 0, px, py, size2d);
+            const rgb = col.replace('#', '');
+            const r = parseInt(rgb.substring(0, 2), 16);
+            const g = parseInt(rgb.substring(2, 4), 16);
+            const b = parseInt(rgb.substring(4, 6), 16);
+            const colorStart = `rgba(${r},${g},${b},1)`;
+            const colorEnd = `rgba(${r},${g},${b},0)`;
+            grd.addColorStop(0, colorStart);
+            grd.addColorStop(1, colorEnd);
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(px, py, size2d, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
       }
 
       // Micrófono
@@ -1138,21 +1330,10 @@
         }
       }
 
-      // Genera un color intermedio entre color1 y color2
+      // Devuelve uno de los cuatro colores definidos en los controles
       function randomColor() {
-        const c1 = settings.color1.replace('#','');
-        const c2 = settings.color2.replace('#','');
-        const r1 = parseInt(c1.slice(0,2),16);
-        const g1 = parseInt(c1.slice(2,4),16);
-        const b1 = parseInt(c1.slice(4,6),16);
-        const r2 = parseInt(c2.slice(0,2),16);
-        const g2 = parseInt(c2.slice(2,4),16);
-        const b2 = parseInt(c2.slice(4,6),16);
-        const t = Math.random();
-        const r = Math.round(r1 + (r2 - r1) * t).toString(16).padStart(2,'0');
-        const g = Math.round(g1 + (g2 - g1) * t).toString(16).padStart(2,'0');
-        const b = Math.round(b1 + (b2 - b1) * t).toString(16).padStart(2,'0');
-        return '#' + r + g + b;
+        const cols = [settings.color1, settings.color2, settings.color3, settings.color4];
+        return cols[Math.floor(Math.random() * cols.length)];
       }
 
     // Invertir un color hexadecimal (por ejemplo #ffcc00 -> #0033ff)
@@ -1168,13 +1349,19 @@
           p.update(micMult);
           // Aumentar el tamaño de la partícula según la intensidad del micrófono
           const r = p.radius * settings.size * micMult;
-          // Invertir colores en los golpes (beat)
-          const col1 = beat ? invertColor(settings.color1) : settings.color1;
-          const col2 = beat ? invertColor(settings.color2) : settings.color2;
-          // gradiente radial para las esferas
+          // Invertir colores en los golpes (beat) y aplicar gradiente de 4 colores
+          const cols = [
+            beat ? invertColor(settings.color1) : settings.color1,
+            beat ? invertColor(settings.color2) : settings.color2,
+            beat ? invertColor(settings.color3) : settings.color3,
+            beat ? invertColor(settings.color4) : settings.color4
+          ];
+          // gradiente radial para las esferas con cuatro paradas
           const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * settings.height * settings.glow);
-          grad.addColorStop(0, col1);
-          grad.addColorStop(1, col2 + '00');
+          grad.addColorStop(0, cols[0]);
+          grad.addColorStop(0.33, cols[1]);
+          grad.addColorStop(0.66, cols[2]);
+          grad.addColorStop(1, cols[3] + '00');
           ctx.beginPath();
           ctx.fillStyle = grad;
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
@@ -1284,6 +1471,8 @@
       function updateSettings() {
         settings.color1 = document.getElementById('color1').value;
         settings.color2 = document.getElementById('color2').value;
+        settings.color3 = document.getElementById('color3').value;
+        settings.color4 = document.getElementById('color4').value;
         settings.speed = parseFloat(document.getElementById('speed').value);
         settings.height = parseFloat(document.getElementById('height').value);
         settings.width = parseFloat(document.getElementById('width2d').value);
@@ -1305,6 +1494,8 @@
       // Actualizar ajustes al mover sliders
       document.getElementById('color1').addEventListener('input', updateSettings);
       document.getElementById('color2').addEventListener('input', updateSettings);
+      document.getElementById('color3').addEventListener('input', updateSettings);
+      document.getElementById('color4').addEventListener('input', updateSettings);
       document.getElementById('speed').addEventListener('input', updateSettings);
       document.getElementById('height').addEventListener('input', updateSettings);
       document.getElementById('width2d').addEventListener('input', updateSettings);
@@ -1317,6 +1508,73 @@
       document.getElementById('grainToggle').addEventListener('change', updateSettings);
       document.getElementById('driftToggle').addEventListener('change', updateSettings);
       document.getElementById('lightToggle').addEventListener('change', updateSettings);
+
+      // Ajustar resolución (rendimiento) cambiando el factor de densidad de píxeles
+      document.getElementById('pixel2d').addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value) || 1;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        // Actualizar ancho y alto del lienzo basados en el nuevo factor de escala
+        width = Math.max(1, Math.floor(rect.width * dpr * v));
+        height = Math.max(1, Math.floor(rect.height * dpr * v));
+        canvas.width = width;
+        canvas.height = height;
+      });
+
+      // Aleatorizar ajustes y colores del modo 2D
+      document.getElementById('randomize2d').addEventListener('click', () => {
+        function rc() {
+          return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+        }
+        document.getElementById('color1').value = rc();
+        document.getElementById('color2').value = rc();
+        document.getElementById('color3').value = rc();
+        document.getElementById('color4').value = rc();
+        // Rango de sliders: velocidad 0.5-3, altura 0.5-3, anchura 0.5-3, turbulencia 0-2
+        document.getElementById('speed').value = (0.5 + Math.random() * 2.5).toFixed(2);
+        document.getElementById('height').value = (0.5 + Math.random() * 2.5).toFixed(2);
+        document.getElementById('width2d').value = (0.5 + Math.random() * 2.5).toFixed(2);
+        document.getElementById('turb2d').value = (Math.random() * 2).toFixed(2);
+        // Cantidad 10-1000, tamaño 5-55 aproximadamente, resplandor 0-3, viento constante -2 a 2
+        const countMin = parseInt(document.getElementById('count').min, 10);
+        const countMax = parseInt(document.getElementById('count').max, 10);
+        document.getElementById('count').value = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+        const sizeMin = parseInt(document.getElementById('size').min || '5', 10);
+        const sizeMax = parseInt(document.getElementById('size').max || '55', 10);
+        document.getElementById('size').value = Math.floor(Math.random() * (sizeMax - sizeMin + 1)) + sizeMin;
+        document.getElementById('glow').value = (Math.random() * 3).toFixed(2);
+        document.getElementById('windConst').value = (Math.random() * 4 - 2).toFixed(2);
+        updateSettings();
+      });
+
+      // Compartir configuración actual del modo 2D copiando un enlace a portapapeles
+      document.getElementById('share2d').addEventListener('click', async () => {
+        const params = new URLSearchParams();
+        params.set('v', '2d');
+        params.set('m', settings.mode);
+        params.set('c1', document.getElementById('color1').value.slice(1));
+        params.set('c2', document.getElementById('color2').value.slice(1));
+        params.set('c3', document.getElementById('color3').value.slice(1));
+        params.set('c4', document.getElementById('color4').value.slice(1));
+        params.set('sp', document.getElementById('speed').value);
+        params.set('he', document.getElementById('height').value);
+        params.set('wi', document.getElementById('width2d').value);
+        params.set('tb', document.getElementById('turb2d').value);
+        params.set('ct', document.getElementById('count').value);
+        params.set('sz', document.getElementById('size').value);
+        params.set('gl', document.getElementById('glow').value);
+        params.set('wd', document.getElementById('windConst').value);
+        params.set('gr', document.getElementById('grainToggle').checked ? '1' : '0');
+        params.set('dr', document.getElementById('driftToggle').checked ? '1' : '0');
+        params.set('th', document.getElementById('lightToggle').checked ? '1' : '0');
+        const url = window.location.origin + window.location.pathname + '#' + params.toString();
+        try {
+          await navigator.clipboard.writeText(url);
+          console.log('Configuración copiada al portapapeles');
+        } catch (err) {
+          console.error('No se pudo copiar al portapapeles', err);
+        }
+      });
 
       // Micrófono toggle
       document.getElementById('micToggle').addEventListener('change', (e) => {
@@ -1368,6 +1626,24 @@
       // Color del clon
       document.getElementById('color3d').addEventListener('input', (e) => {
         settings3d.color = e.target.value;
+      });
+      // Cargar modelo OBJ
+      document.getElementById('modelFile').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const text = evt.target.result;
+          const geom = parseOBJ(text);
+          if (geom) {
+            modelGeometry3d = geom;
+            init3d();
+          } else {
+            console.error('No se pudo cargar el modelo. Asegúrate de que sea un OBJ válido.');
+            modelGeometry3d = null;
+          }
+        };
+        reader.readAsText(file);
       });
       // Número de clones
       document.getElementById('count3d').addEventListener('input', (e) => {
@@ -1421,6 +1697,16 @@
       document.getElementById('showPanel3d').addEventListener('click', () => {
         document.getElementById('controls3d').style.display = 'block';
         document.getElementById('controls3dCollapsed').style.display = 'none';
+      });
+
+      // Ocultar y mostrar panel en 2D
+      document.getElementById('hidePanel2d').addEventListener('click', () => {
+        document.getElementById('controls2d').style.display = 'none';
+        document.getElementById('controls2dCollapsed').style.display = 'block';
+      });
+      document.getElementById('showPanel2d').addEventListener('click', () => {
+        document.getElementById('controls2d').style.display = 'block';
+        document.getElementById('controls2dCollapsed').style.display = 'none';
       });
 
       // Inicializar y arrancar animación
