@@ -37,6 +37,7 @@
       <option value="spheres" selected>Esferas</option>
       <option value="abstract">Abstracto</option>
       <option value="custom">Personalizado</option>
+      <option value="3d">3D</option>
     </select>
   </div>
 
@@ -47,7 +48,7 @@
   <canvas id="canvas2d"></canvas>
 
   <!-- Panel de control para modos 2D -->
-  <div id="controls2d" class="absolute top-12 left-2 z-20 bg-black/70 backdrop-blur px-4 py-3 rounded-lg border border-white/20 w-60" style="display:block;">
+  <div id="controls2d" class="absolute top-12 left-2 z-20 bg-black/70 backdrop-blur px-4 py-3 rounded-lg border border-white/20 w-64" style="display:block;">
     <div class="mb-2">
       <label>Color 1
         <input type="color" id="color1" class="align-middle" value="#fdcc0d" />
@@ -60,28 +61,42 @@
     </div>
     <div class="mb-2">
       <label>Velocidad
-        <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" class="w-32" />
+        <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" class="w-36" />
       </label>
     </div>
     <div class="mb-2">
       <label>Altura
-        <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" class="w-32" />
+        <input type="range" id="height" min="0.5" max="3" step="0.1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Anchura
+        <input type="range" id="width2d" min="0.5" max="3" step="0.1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Turbulencia
+        <input type="range" id="turb2d" min="0" max="2" step="0.1" value="0" class="w-36" />
       </label>
     </div>
     <div class="mb-2">
       <label>Cantidad
-        <input type="range" id="count" min="10" max="1000" step="10" value="200" class="w-32" />
+        <input type="range" id="count" min="10" max="1000" step="10" value="200" class="w-36" />
       </label>
     </div>
     <div class="mb-2">
       <label>Tamaño
-        <input type="range" id="size" min="0.5" max="3" step="0.1" value="1" class="w-32" />
+        <input type="range" id="size" min="0.5" max="3" step="0.1" value="1" class="w-36" />
       </label>
     </div>
-    <!-- Control de brillo/resplandor de las partículas -->
     <div class="mb-2">
       <label>Resplandor
-        <input type="range" id="glow" min="0" max="5" step="0.1" value="1" class="w-32" />
+        <input type="range" id="glow" min="0" max="5" step="0.1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Viento constante
+        <input type="range" id="windConst" min="-2" max="2" step="0.1" value="0" class="w-36" />
       </label>
     </div>
     <div class="mb-2" id="customImageWrapper" style="display:none;">
@@ -95,11 +110,107 @@
       </label>
     </div>
     <div class="mb-2">
+      <label>Sensib. mic
+        <input type="range" id="micSens2d" min="0" max="2" step="0.1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
       <label>Viento táctil
         <input type="checkbox" id="windToggle" class="align-middle" />
       </label>
     </div>
+    <div class="mb-2">
+      <label>Granulado
+        <input type="checkbox" id="grainToggle" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Auto drift
+        <input type="checkbox" id="driftToggle" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Tema claro
+        <input type="checkbox" id="lightToggle" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <button id="hidePanel2d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Ocultar panel</button>
+    </div>
   </div>
+  <div id="controls2dCollapsed" class="absolute top-12 left-2 z-20" style="display:none;">
+    <button id="showPanel2d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
+  </div>
+
+  <!-- Contenedor para modo 3D y su panel de control -->
+  <div id="threeContainer" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;"></div>
+  <div id="controls3d" class="absolute top-12 right-2 z-20 bg-black/70 backdrop-blur px-4 py-3 rounded-lg border border-white/20 w-64" style="display:none;">
+    <div class="mb-2">
+      <label>Modelo
+        <input type="file" id="modelFile" accept=".glb,.gltf,.obj" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Color
+        <input type="color" id="color3d" class="align-middle" value="#ffffff" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Clones
+        <input type="range" id="count3d" min="1" max="50" step="1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Escala
+        <input type="range" id="scale3d" min="0.1" max="3" step="0.1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Vel. rotación
+        <input type="range" id="speed3d" min="-3" max="3" step="0.05" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Separación
+        <input type="range" id="spread3d" min="0" max="10" step="0.2" value="2" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Micrófono
+        <input type="checkbox" id="mic3d" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Sensib. mic
+        <input type="range" id="micSens3d" min="0" max="2" step="0.1" value="1" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Viento
+        <input type="range" id="wind3d" min="-2" max="2" step="0.1" value="0" class="w-36" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Auto drift
+        <input type="checkbox" id="drift3d" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <label>Tema claro
+        <input type="checkbox" id="light3d" class="align-middle" />
+      </label>
+    </div>
+    <div class="mb-2">
+      <button id="hidePanel3d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Ocultar panel</button>
+    </div>
+    <div id="controls3dCollapsed" style="display:none;">
+      <button id="showPanel3d" class="text-xs rounded-lg px-3 py-1 border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
+    </div>
+  </div>
+
+  <!-- Librerías para 3D (Three.js y GLTFLoader) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <!-- React y Babel para el modo "original" -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -788,18 +899,25 @@
       window.addEventListener('resize', resize);
       resize();
 
-      // Configuración inicial del modo 2D
+      // Configuración inicial del modo 2D con controles avanzados
       const settings = {
         mode: 'spheres',
         color1: '#fdcc0d',
         color2: '#32527b',
         speed: 1,
         height: 1,
+        width: 1,
+        turb: 0,
         count: 200,
         size: 1,
         glow: 1,
+        windConst: 0,
         image: null,
-        windActive: false
+        micSensitivity: 1,
+        pointerWind: false,
+        grain: false,
+        drift: false,
+        themeLight: false
       };
 
       let particles = [];
@@ -844,7 +962,8 @@
           this.reset();
         }
         reset() {
-          this.x = Math.random() * width;
+          // Distribuir horizontalmente según anchura
+          this.x = Math.random() * width * settings.width;
           this.y = height;
           this.radius = 10 + Math.random() * 20;
           this.life = 0;
@@ -853,7 +972,8 @@
           this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
         }
         update(micMult) {
-          this.x += this.vx + wind * 0.5;
+          // Movimiento horizontal influenciado por turbulencia y viento
+          this.x += this.vx * settings.turb + wind;
           this.y += this.vy - micMult * 2;
           this.life++;
           if (this.life > this.ttl || this.y < -50) {
@@ -968,12 +1088,12 @@
       }
 
       function animate() {
-        // Ligeramente transparente para crear estela
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        // Ligeramente transparente para crear estela con tema dinámico
+        ctx.fillStyle = settings.themeLight ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
         ctx.fillRect(0, 0, width, height);
 
         const micLevel = getMicLevel();
-        const micMult = 1 + micLevel * 10;
+        const micMult = 1 + micLevel * 10 * settings.micSensitivity;
 
         if (settings.mode === 'spheres') {
           drawParticles(micMult);
@@ -983,8 +1103,31 @@
           drawCustom(micMult);
         }
 
-        // viento
+        // Ajustar viento objetivo según drift o puntero
+        if (!settings.pointerWind) {
+          if (settings.drift) {
+            const t = Date.now() * 0.0004;
+            targetWind = Math.sin(t) * 2;
+          } else {
+            targetWind = 0;
+          }
+        }
+        // Aplicar interpolación hacia el viento objetivo
         wind += (targetWind - wind) * 0.05;
+        // Aplicar viento constante configurado
+        wind += settings.windConst * 0.02;
+
+        // Añadir grano/ruido si está activado
+        if (settings.grain) {
+          ctx.save();
+          ctx.fillStyle = settings.themeLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)';
+          for (let i = 0; i < 300; i++) {
+            const gx = Math.random() * width;
+            const gy = Math.random() * height;
+            ctx.fillRect(gx, gy, 1, 1);
+          }
+          ctx.restore();
+        }
         requestAnimationFrame(animate);
       }
 
@@ -1003,10 +1146,20 @@
         settings.color2 = document.getElementById('color2').value;
         settings.speed = parseFloat(document.getElementById('speed').value);
         settings.height = parseFloat(document.getElementById('height').value);
+        settings.width = parseFloat(document.getElementById('width2d').value);
+        settings.turb = parseFloat(document.getElementById('turb2d').value);
         settings.count = parseInt(document.getElementById('count').value, 10);
         settings.size = parseFloat(document.getElementById('size').value);
         settings.glow = parseFloat(document.getElementById('glow').value);
+        settings.windConst = parseFloat(document.getElementById('windConst').value);
+        settings.micSensitivity = parseFloat(document.getElementById('micSens2d').value);
+        settings.grain = document.getElementById('grainToggle').checked;
+        settings.drift = document.getElementById('driftToggle').checked;
+        settings.themeLight = document.getElementById('lightToggle').checked;
+        // Reinitialize based on new settings
         initMode();
+        // Update canvas background according to theme
+        document.getElementById('canvas2d').style.backgroundColor = settings.themeLight ? '#ffffff' : '#000000';
       }
 
       // Actualizar ajustes al mover sliders
@@ -1014,9 +1167,16 @@
       document.getElementById('color2').addEventListener('input', updateSettings);
       document.getElementById('speed').addEventListener('input', updateSettings);
       document.getElementById('height').addEventListener('input', updateSettings);
+      document.getElementById('width2d').addEventListener('input', updateSettings);
+      document.getElementById('turb2d').addEventListener('input', updateSettings);
       document.getElementById('count').addEventListener('input', updateSettings);
       document.getElementById('size').addEventListener('input', updateSettings);
       document.getElementById('glow').addEventListener('input', updateSettings);
+      document.getElementById('windConst').addEventListener('input', updateSettings);
+      document.getElementById('micSens2d').addEventListener('input', updateSettings);
+      document.getElementById('grainToggle').addEventListener('change', updateSettings);
+      document.getElementById('driftToggle').addEventListener('change', updateSettings);
+      document.getElementById('lightToggle').addEventListener('change', updateSettings);
 
       // Micrófono toggle
       document.getElementById('micToggle').addEventListener('change', (e) => {
@@ -1029,18 +1189,22 @@
 
       // Viento táctil toggle
       document.getElementById('windToggle').addEventListener('change', (e) => {
-        settings.windActive = e.target.checked;
+        // Activar o desactivar el viento controlado por el puntero
+        settings.pointerWind = e.target.checked;
       });
 
       // Control de viento con movimiento del ratón
       canvas.addEventListener('mousemove', (e) => {
-        if (settings.windActive) {
+        if (settings.pointerWind) {
           const relX = e.clientX / width;
-          targetWind = (relX - 0.5) * 5;
+          // Mapea la posición horizontal a un rango de viento -2..2
+          targetWind = (relX - 0.5) * 4;
         }
       });
       canvas.addEventListener('mouseleave', () => {
-        targetWind = 0;
+        if (settings.pointerWind) {
+          targetWind = 0;
+        }
       });
 
       // Carga de imagen personalizada
@@ -1077,40 +1241,311 @@
       };
     })();
 
+    /* Código para el modo 3D: utiliza Three.js para cargar modelos GLB/GLTF/OBJ y
+     * genera múltiples clones con controles de color, escala, separación, rotación,
+     * micrófono y viento. Proporciona un panel que puede minimizarse.
+     */
+    (function() {
+      // Variables de escena 3D
+      let scene = null;
+      let camera = null;
+      let renderer = null;
+      let model3d = null;
+      let clones3d = [];
+      let threeInitialized = false;
+
+      // Configuración para el modo 3D
+      const settings3d = {
+        color: '#ffffff',
+        count: 1,
+        scale: 1,
+        speed: 1,
+        spread: 2,
+        micEnabled: false,
+        micSensitivity: 1,
+        wind: 0,
+        drift: false,
+        themeLight: false
+      };
+      // Micrófono para 3D
+      let micCtx3d;
+      let micAnalyser3d;
+      let micData3d;
+      let micOn3d = false;
+      function initMic3d() {
+        if (micOn3d) return;
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+          micCtx3d = new (window.AudioContext || window.webkitAudioContext)();
+          micAnalyser3d = micCtx3d.createAnalyser();
+          const source = micCtx3d.createMediaStreamSource(stream);
+          source.connect(micAnalyser3d);
+          micAnalyser3d.fftSize = 256;
+          micData3d = new Uint8Array(micAnalyser3d.frequencyBinCount);
+          micOn3d = true;
+        }).catch((err) => {
+          console.error('Error al acceder al micrófono 3D:', err);
+        });
+      }
+      function getMicLevel3d() {
+        if (!micOn3d || !micAnalyser3d) return 0;
+        micAnalyser3d.getByteFrequencyData(micData3d);
+        let sum = 0;
+        for (let i = 0; i < micData3d.length; i++) {
+          sum += micData3d[i];
+        }
+        return sum / micData3d.length / 255;
+      }
+
+      function init3d() {
+        // Configurar escena, cámara y renderer
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 6);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.getElementById('threeContainer').innerHTML = '';
+        document.getElementById('threeContainer').appendChild(renderer.domElement);
+
+        // Luces
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambient);
+        const directional = new THREE.DirectionalLight(0xffffff, 0.6);
+        directional.position.set(5, 5, 5);
+        scene.add(directional);
+
+        // Escucha cambios de tamaño de la ventana
+        window.addEventListener('resize', () => {
+          if (!renderer || !camera) return;
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+        });
+
+        animate3d();
+      }
+
+      function applyColor(object) {
+        object.traverse((child) => {
+          if (child.isMesh) {
+            child.material = child.material.clone();
+            if (child.material.color) {
+              child.material.color.set(settings3d.color);
+            }
+          }
+        });
+      }
+
+      function loadModel(dataUrl) {
+        // Eliminar clones anteriores
+        clones3d.forEach((c) => scene && scene.remove(c));
+        clones3d = [];
+        model3d = null;
+        const loader = new THREE.GLTFLoader();
+        loader.parse = loader.parse.bind(loader);
+        loader.load(dataUrl, (gltf) => {
+          model3d = gltf.scene;
+          applyColor(model3d);
+          updateClones3d();
+        }, undefined, (e) => {
+          console.error('Error al cargar modelo 3D:', e);
+        });
+      }
+
+      function updateClones3d() {
+        // Eliminar clones existentes
+        clones3d.forEach((c) => scene && scene.remove(c));
+        clones3d = [];
+        if (!model3d || !scene) return;
+        const total = Math.max(1, settings3d.count);
+        for (let i = 0; i < total; i++) {
+          const clone = model3d.clone();
+          const angle = (i / total) * Math.PI * 2;
+          const radius = settings3d.spread;
+          clone.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+          clone.scale.set(settings3d.scale, settings3d.scale, settings3d.scale);
+          clones3d.push(clone);
+          scene.add(clone);
+        }
+      }
+
+      function animate3d() {
+        requestAnimationFrame(animate3d);
+        if (!renderer || !scene || !camera) return;
+        const micLevel = getMicLevel3d();
+        const micMult = 1 + micLevel * settings3d.micSensitivity * 5;
+        for (const obj of clones3d) {
+          obj.rotation.y += settings3d.speed * 0.01;
+          obj.rotation.x += settings3d.wind * 0.01;
+          obj.scale.set(settings3d.scale * micMult, settings3d.scale * micMult, settings3d.scale * micMult);
+        }
+        // Auto drift para viento
+        if (settings3d.drift) {
+          settings3d.wind = Math.sin(Date.now() * 0.0005) * 2;
+        }
+        // Ajustar color de fondo
+        renderer.setClearColor(settings3d.themeLight ? 0xffffff : 0x000000, 0);
+        renderer.render(scene, camera);
+      }
+
+      // Eventos de UI para 3D
+      document.getElementById('modelFile').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            loadModel(ev.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      document.getElementById('color3d').addEventListener('input', (e) => {
+        settings3d.color = e.target.value;
+        if (model3d) {
+          applyColor(model3d);
+        }
+      });
+      document.getElementById('count3d').addEventListener('input', (e) => {
+        settings3d.count = parseInt(e.target.value, 10) || 1;
+        updateClones3d();
+      });
+      document.getElementById('scale3d').addEventListener('input', (e) => {
+        settings3d.scale = parseFloat(e.target.value);
+        updateClones3d();
+      });
+      document.getElementById('speed3d').addEventListener('input', (e) => {
+        settings3d.speed = parseFloat(e.target.value);
+      });
+      document.getElementById('spread3d').addEventListener('input', (e) => {
+        settings3d.spread = parseFloat(e.target.value);
+        updateClones3d();
+      });
+      document.getElementById('mic3d').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          initMic3d();
+        } else {
+          micOn3d = false;
+        }
+      });
+      document.getElementById('micSens3d').addEventListener('input', (e) => {
+        settings3d.micSensitivity = parseFloat(e.target.value);
+      });
+      document.getElementById('wind3d').addEventListener('input', (e) => {
+        settings3d.wind = parseFloat(e.target.value);
+      });
+      document.getElementById('drift3d').addEventListener('change', (e) => {
+        settings3d.drift = e.target.checked;
+      });
+      document.getElementById('light3d').addEventListener('change', (e) => {
+        settings3d.themeLight = e.target.checked;
+      });
+      document.getElementById('hidePanel3d').addEventListener('click', () => {
+        document.getElementById('controls3d').style.display = 'none';
+        document.getElementById('controls3dCollapsed').style.display = 'block';
+      });
+      document.getElementById('showPanel3d').addEventListener('click', () => {
+        document.getElementById('controls3d').style.display = 'block';
+        document.getElementById('controls3dCollapsed').style.display = 'none';
+      });
+
+      // Exponer inicializador global
+      window._init3d = function() {
+        if (!threeInitialized) {
+          init3d();
+          threeInitialized = true;
+        } else {
+          // Forzar actualización de clones al volver a modo 3D
+          updateClones3d();
+        }
+      };
+    })();
+
     // Selección global de modos y montaje/desmontaje de React
     (function() {
       const modeSelect = document.getElementById('modeSelect');
       let isReactMounted = false;
+      let isThreeMounted = false;
       modeSelect.addEventListener('change', function(e) {
         const mode = e.target.value;
         if (mode === 'original') {
-          // Mostrar llama WebGL
+          // Mostrar llama WebGL y ocultar otros modos
+          document.getElementById('threeContainer').style.display = 'none';
+          document.getElementById('controls3d').style.display = 'none';
+          document.getElementById('controls3dCollapsed').style.display = 'none';
           document.getElementById('canvas2d').style.display = 'none';
           document.getElementById('controls2d').style.display = 'none';
+          document.getElementById('controls2dCollapsed').style.display = 'none';
           document.getElementById('flame-wrapper').style.display = 'block';
           if (!isReactMounted) {
             ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
             isReactMounted = true;
           }
-        } else {
-          // Mostrar modos 2D
+        } else if (mode === '3d') {
+          // Mostrar modo 3D
           document.getElementById('flame-wrapper').style.display = 'none';
+          document.getElementById('canvas2d').style.display = 'none';
+          document.getElementById('controls2d').style.display = 'none';
+          document.getElementById('controls2dCollapsed').style.display = 'none';
+          document.getElementById('threeContainer').style.display = 'block';
+          // Mostrar panel 3D (si estaba colapsado, mostrar panel principal)
+          document.getElementById('controls3dCollapsed').style.display = 'none';
+          document.getElementById('controls3d').style.display = 'block';
+          if (!isThreeMounted) {
+            // Inicializar Three.js sólo una vez
+            if (typeof window._init3d === 'function') {
+              window._init3d();
+              isThreeMounted = true;
+            }
+          } else {
+            // Actualizar clones si se cambia de modo
+            if (typeof window._init3d === 'function') {
+              window._init3d();
+            }
+          }
+        } else {
+          // Mostrar modos 2D (spheres, abstract, custom)
+          document.getElementById('flame-wrapper').style.display = 'none';
+          document.getElementById('threeContainer').style.display = 'none';
+          document.getElementById('controls3d').style.display = 'none';
+          document.getElementById('controls3dCollapsed').style.display = 'none';
           document.getElementById('canvas2d').style.display = 'block';
+          // Al cambiar a 2D, mostrar panel principal
           document.getElementById('controls2d').style.display = 'block';
+          document.getElementById('controls2dCollapsed').style.display = 'none';
           window._update2dMode(mode);
         }
       });
       // Inicialización al cargar
       if (modeSelect.value === 'original') {
+        document.getElementById('threeContainer').style.display = 'none';
+        document.getElementById('controls3d').style.display = 'none';
+        document.getElementById('controls3dCollapsed').style.display = 'none';
         document.getElementById('canvas2d').style.display = 'none';
         document.getElementById('controls2d').style.display = 'none';
+        document.getElementById('controls2dCollapsed').style.display = 'none';
         document.getElementById('flame-wrapper').style.display = 'block';
         ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
         isReactMounted = true;
+      } else if (modeSelect.value === '3d') {
+        document.getElementById('flame-wrapper').style.display = 'none';
+        document.getElementById('canvas2d').style.display = 'none';
+        document.getElementById('controls2d').style.display = 'none';
+        document.getElementById('controls2dCollapsed').style.display = 'none';
+        document.getElementById('threeContainer').style.display = 'block';
+        document.getElementById('controls3d').style.display = 'block';
+        document.getElementById('controls3dCollapsed').style.display = 'none';
+        if (typeof window._init3d === 'function') {
+          window._init3d();
+          isThreeMounted = true;
+        }
       } else {
         document.getElementById('flame-wrapper').style.display = 'none';
+        document.getElementById('threeContainer').style.display = 'none';
+        document.getElementById('controls3d').style.display = 'none';
+        document.getElementById('controls3dCollapsed').style.display = 'none';
         document.getElementById('canvas2d').style.display = 'block';
         document.getElementById('controls2d').style.display = 'block';
+        document.getElementById('controls2dCollapsed').style.display = 'none';
         // Inicializa el modo 2D seleccionado (incluyendo 'custom')
         window._update2dMode(modeSelect.value);
       }
