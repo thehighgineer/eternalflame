@@ -1290,35 +1290,53 @@
         constructor() {
           this.reset();
         }
-        reset() {
-          // Distribuir horizontalmente según anchura
-          this.x = Math.random() * width * settings.width;
-          this.y = height;
-          this.radius = 10 + Math.random() * 20;
-          this.life = 0;
-          this.ttl = (60 + Math.random() * 80) * settings.height;
-          // Asignar velocidad inicial según la dirección seleccionada
-          const dir = settings.direction || 'up';
-          if (dir === 'up') {
-            this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
-          } else if (dir === 'down') {
-            this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = (0.6 + Math.random() * 1.2) * settings.speed;
-          } else if (dir === 'left') {
-            this.vx = -(0.6 + Math.random() * 1.2) * settings.speed;
-            this.vy = (Math.random() - 0.5) * 1.5;
-          } else if (dir === 'right') {
-            this.vx = (0.6 + Math.random() * 1.2) * settings.speed;
-            this.vy = (Math.random() - 0.5) * 1.5;
-          } else {
-            this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
-          }
-        }
+              reset() {
+                // Posición inicial y velocidad se ajustan según la dirección para
+                // que las partículas salgan claramente desde el borde
+                this.radius = 10 + Math.random() * 20;
+                this.life = 0;
+                this.ttl = (60 + Math.random() * 80) * settings.height;
+                // Velocidad base más alta para que el cambio de dirección sea
+                // evidente. Ajustamos según la velocidad global.
+                const baseVel = (3 + Math.random() * 1.5) * settings.speed;
+                const dir = settings.direction || 'up';
+                if (dir === 'up') {
+                  // Nace en la parte inferior y sube con velocidad vertical alta
+                  this.x = Math.random() * width * settings.width;
+                  this.y = height + 80;
+                  this.vx = (Math.random() - 0.5) * 0.5;
+                  this.vy = -baseVel;
+                } else if (dir === 'down') {
+                  // Nace en la parte superior y baja
+                  this.x = Math.random() * width * settings.width;
+                  this.y = -80;
+                  this.vx = (Math.random() - 0.5) * 0.5;
+                  this.vy = baseVel;
+                } else if (dir === 'left') {
+                  // Nace en el lado derecho y se mueve hacia la izquierda
+                  this.x = width + 80;
+                  this.y = Math.random() * height;
+                  this.vx = -baseVel;
+                  this.vy = (Math.random() - 0.5) * 0.5;
+                } else if (dir === 'right') {
+                  // Nace en el lado izquierdo y se mueve hacia la derecha
+                  this.x = -80;
+                  this.y = Math.random() * height;
+                  this.vx = baseVel;
+                  this.vy = (Math.random() - 0.5) * 0.5;
+                } else {
+                  // Por defecto: arriba
+                  this.x = Math.random() * width * settings.width;
+                  this.y = height + 80;
+                  this.vx = (Math.random() - 0.5) * 0.5;
+                  this.vy = -baseVel;
+                }
+              }
         update(micMult) {
           // Movimiento horizontal influenciado por turbulencia y viento
-          this.x += this.vx * settings.turb + wind;
+          // Reducimos el efecto de la turbulencia para que la dirección tenga
+          // mayor protagonismo. El viento se aplica como desplazamiento constante.
+          this.x += this.vx + wind;
           this.y += this.vy - micMult * 2;
           this.life++;
           if (this.life > this.ttl || this.y < -50) {
@@ -1332,31 +1350,40 @@
         constructor() {
           this.reset();
         }
-        reset() {
-          this.x = Math.random() * width;
-          this.y = height;
-          this.radius = 10 + Math.random() * 20;
-          this.life = 0;
-          this.ttl = (60 + Math.random() * 80) * settings.height;
-          // Asignar velocidad inicial según la dirección
-          const dirC = settings.direction || 'up';
-          if (dirC === 'up') {
-            this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
-          } else if (dirC === 'down') {
-            this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = (0.6 + Math.random() * 1.2) * settings.speed;
-          } else if (dirC === 'left') {
-            this.vx = -(0.6 + Math.random() * 1.2) * settings.speed;
-            this.vy = (Math.random() - 0.5) * 1.5;
-          } else if (dirC === 'right') {
-            this.vx = (0.6 + Math.random() * 1.2) * settings.speed;
-            this.vy = (Math.random() - 0.5) * 1.5;
-          } else {
-            this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
-          }
-        }
+             reset() {
+               // Posición inicial y velocidad ajustadas según la dirección
+               this.radius = 10 + Math.random() * 20;
+               this.life = 0;
+               this.ttl = (60 + Math.random() * 80) * settings.height;
+               const baseVel = (3 + Math.random() * 1.5) * settings.speed;
+               const dirC = settings.direction || 'up';
+               if (dirC === 'up') {
+                 this.x = Math.random() * width * settings.width;
+                 this.y = height + 80;
+                 this.vx = (Math.random() - 0.5) * 0.5;
+                 this.vy = -baseVel;
+               } else if (dirC === 'down') {
+                 this.x = Math.random() * width * settings.width;
+                 this.y = -80;
+                 this.vx = (Math.random() - 0.5) * 0.5;
+                 this.vy = baseVel;
+               } else if (dirC === 'left') {
+                 this.x = width + 80;
+                 this.y = Math.random() * height;
+                 this.vx = -baseVel;
+                 this.vy = (Math.random() - 0.5) * 0.5;
+               } else if (dirC === 'right') {
+                 this.x = -80;
+                 this.y = Math.random() * height;
+                 this.vx = baseVel;
+                 this.vy = (Math.random() - 0.5) * 0.5;
+               } else {
+                 this.x = Math.random() * width * settings.width;
+                 this.y = height + 80;
+                 this.vx = (Math.random() - 0.5) * 0.5;
+                 this.vy = -baseVel;
+               }
+             }
         update(micMult) {
           this.x += this.vx + wind * 0.5;
           this.y += this.vy - micMult * 2;
@@ -1488,7 +1515,9 @@
           // pattern. The offset wraps around the canvas dimensions.
           const dir = settings.direction;
           // Use the speed slider to influence translation speed; scale factor
-          const shift = settings.speed * 2;
+          // Ajustamos el desplazamiento para que la dirección sea más evidente en
+          // el modo abstracto. Un factor más alto produce un movimiento visible.
+          const shift = settings.speed * 5;
           if (dir === 'left') abstractOffsetX -= shift;
           else if (dir === 'right') abstractOffsetX += shift;
           if (dir === 'up') abstractOffsetY -= shift;
@@ -1748,6 +1777,8 @@
                 modelGeometry3d = geom;
                 window.threeModel = null;
                 init3d();
+                // Crear clones con el modelo cargado cuando se usa el parser simple
+                createClones3d();
               } else {
                 console.error('No se pudo cargar el modelo. Asegúrate de que sea un OBJ válido.');
                 modelGeometry3d = null;
