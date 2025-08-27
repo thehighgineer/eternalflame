@@ -58,6 +58,7 @@
       <option value="spheres" selected>Esferas</option>
       <option value="abstract">Abstracto</option>
       <option value="custom">Personalizado</option>
+      <option value="bars">Barras</option>
       <option value="3d">3D</option>
     </select>
   </div>
@@ -978,6 +979,29 @@
       let abstractOffsetX = 0;
       let abstractOffsetY = 0;
 
+      // Herramienta de interpolación de colores para modo barras
+      // Convierte un color hexadecimal a sus componentes RGB
+      function hexToRgbComponents(hex) {
+        const h = hex.replace('#', '');
+        const r = parseInt(h.substring(0, 2), 16);
+        const g = parseInt(h.substring(2, 4), 16);
+        const b = parseInt(h.substring(4, 6), 16);
+        return [r, g, b];
+      }
+      // Interpola entre dos colores hexadecimales según t (0 a 1) y devuelve un nuevo color en formato hex
+      function lerpColorHex(a, b, t) {
+        const ar = parseInt(a.substring(1, 3), 16);
+        const ag = parseInt(a.substring(3, 5), 16);
+        const ab = parseInt(a.substring(5, 7), 16);
+        const br = parseInt(b.substring(1, 3), 16);
+        const bg = parseInt(b.substring(3, 5), 16);
+        const bb = parseInt(b.substring(5, 7), 16);
+        const rr = Math.round(ar + (br - ar) * t);
+        const gg = Math.round(ag + (bg - ag) * t);
+        const bb2 = Math.round(ab + (bb - ab) * t);
+        return '#' + rr.toString(16).padStart(2, '0') + gg.toString(16).padStart(2, '0') + bb2.toString(16).padStart(2, '0');
+      }
+
       // 3D engine: parámetros y datos
       const settings3d = {
         color: '#ffffff', // color base de los clones
@@ -1509,6 +1533,43 @@
         ctx.restore();
       }
 
+      // Inicializar barras (no se necesita precálculo)
+      function initBars() {
+        // No hay datos persistentes para las barras; se generan dinámicamente durante el dibujo
+      }
+
+      // Dibujar visualizador de barras al estilo de reproductores clásicos
+      function drawBars(micMult, beat) {
+        // Recalcular el nivel del micrófono para cada cuadro para mayor precisión
+        const micLevelLocal = getMicLevel();
+        const n = Math.max(1, settings.count);
+        const bw = width / n;
+        for (let i = 0; i < n; i++) {
+          const t = n === 1 ? 0 : i / (n - 1);
+          // Determinar el color interpolando entre los cuatro colores definidos
+          let col;
+          if (t < 1 / 3) {
+            col = lerpColorHex(settings.color1, settings.color2, t * 3);
+          } else if (t < 2 / 3) {
+            col = lerpColorHex(settings.color2, settings.color3, (t - 1 / 3) * 3);
+          } else {
+            col = lerpColorHex(settings.color3, settings.color4, (t - 2 / 3) * 3);
+          }
+          // Determinar altura de la barra basada en el nivel de micrófono y factores de usuario
+          // Añadir un valor base (0.05) para que las barras sean visibles incluso sin audio
+          // Usamos un factor de escala mayor (400) para que las barras ocupen una parte significativa del lienzo
+          const amp = (micLevelLocal + 0.05) * settings.height * 400 * (0.5 + Math.random() * 0.5);
+          const barHeight = Math.min(height, amp);
+          const xPos = i * bw + bw * 0.1;
+          const barW = bw * 0.8;
+          const yPos = height - barHeight;
+          // Invertir color en los beats
+          const drawColor = beat ? invertColor3D(col) : col;
+          ctx.fillStyle = drawColor;
+          ctx.fillRect(xPos, yPos, barW, barHeight);
+        }
+      }
+
       function animate() {
         // Ligeramente transparente para crear estela con tema dinámico
         ctx.fillStyle = settings.themeLight ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
@@ -1548,6 +1609,8 @@
             drawAbstract(micMult, beat);
           } else if (settings.mode === 'custom') {
             drawCustom(micMult, beat);
+          } else if (settings.mode === 'bars') {
+            drawBars(micMult, beat);
           }
         }
 
@@ -1586,6 +1649,8 @@
           initAbstracts();
         } else if (settings.mode === 'custom') {
           initCustom();
+        } else if (settings.mode === 'bars') {
+          initBars();
         } else if (settings.mode === '3d') {
           init3d();
         }
@@ -1615,7 +1680,33 @@
         // Reinitialize based on new settings
         initMode();
         // Update canvas background according to theme
-        document.getElementById('canvas2d').style.backgroundColor = settings.themeLight ? '#ffffff' : '#000000';
+        const canvasEl = document.getElementById('canvas2d');
+        if (canvasEl) {
+          canvasEl.style.backgroundColor = settings.themeLight ? '#ffffff' : '#000000';
+          // Apply rotation based on direction for 2D modes (spheres, abstract, custom, bars)
+          const modesForRotation = ['spheres', 'abstract', 'custom', 'bars'];
+          if (modesForRotation.includes(settings.mode)) {
+            let angle = 0;
+            switch (settings.direction) {
+              case 'down':
+                angle = 180;
+                break;
+              case 'left':
+                angle = -90;
+                break;
+              case 'right':
+                angle = 90;
+                break;
+              default:
+                angle = 0;
+            }
+            canvasEl.style.transform = 'rotate(' + angle + 'deg)';
+            canvasEl.style.transformOrigin = 'center center';
+          } else {
+            // Reset any rotation when switching away from 2D modes
+            canvasEl.style.transform = '';
+          }
+        }
       }
 
       // Actualizar ajustes al mover sliders
