@@ -105,6 +105,16 @@
         <label class="text-xs opacity-80">Turbulencia</label>
         <input type="range" id="turb2d" min="0" max="2" step="0.1" value="0" class="w-44" />
       </div>
+      <!-- Dirección de movimiento para partículas 2D -->
+      <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+        <label class="text-xs opacity-80">Dirección</label>
+        <select id="direction2d" class="bg-black/60 text-white rounded-md border border-white/30 px-2 py-1 w-44">
+          <option value="up" selected>Arriba</option>
+          <option value="down">Abajo</option>
+          <option value="left">Izquierda</option>
+          <option value="right">Derecha</option>
+        </select>
+      </div>
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Cantidad</label>
         <input type="range" id="count" min="10" max="1000" step="10" value="200" class="w-44" />
@@ -183,7 +193,7 @@
     <div class="p-3 space-y-2">
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Modelo</label>
-        <input type="file" id="modelFile" accept=".obj" class="w-44" />
+        <input type="file" id="modelFile" accept=".obj,.glb,.gltf" class="w-44" />
       </div>
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Color</label>
@@ -232,12 +242,20 @@
     <button id="showPanel3d" class="text-xs px-3 py-2 rounded-md border border-white/10 bg-white/10 hover:bg-white/20">Mostrar panel</button>
   </div>
 
+  <!-- Branding that hides with the control panel and watermark always visible -->
+  <div id="branding" class="absolute right-3 bottom-24 z-20 text-xs opacity-70 pointer-events-none">Spatialgineers Visualizers</div>
+  <div id="watermark" class="absolute left-3 bottom-3 z-20 text-xs opacity-40 pointer-events-none">Spatialgineers Visualizers</div>
+
   <!-- La versión 3D se implementa a mano sin dependencias externas para evitar problemas de carga. -->
 
   <!-- React y Babel para el modo "original" -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Three.js and its loaders for 3D model support -->
+  <script src="https://unpkg.com/three@0.156.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.156.1/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://unpkg.com/three@0.156.1/examples/js/loaders/OBJLoader.js"></script>
 
   <script type="text/babel">
     /*
@@ -937,6 +955,8 @@
         size: 1,
         glow: 1,
         windConst: 0,
+        // Dirección del movimiento de las partículas (up, down, left, right)
+        direction: 'up',
         image: null,
         micSensitivity: 1,
         pointerWind: false,
@@ -1062,6 +1082,10 @@
         }
         // Ajustar color de fondo del lienzo según el tema del modo 3D
         document.getElementById('canvas2d').style.backgroundColor = settings3d.themeLight ? '#ffffff' : '#000000';
+        // Crear o recrear clones utilizando Three.js (si está disponible)
+        if (typeof THREE !== 'undefined') {
+          createClones3d();
+        }
       }
       // Dibujar los clones 3D con perspectiva simple
       function draw3d(micMult, beat) {
@@ -1266,8 +1290,24 @@
           this.radius = 10 + Math.random() * 20;
           this.life = 0;
           this.ttl = (60 + Math.random() * 80) * settings.height;
-          this.vx = (Math.random() - 0.5) * 1.5;
-          this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
+          // Asignar velocidad inicial según la dirección seleccionada
+          const dir = settings.direction || 'up';
+          if (dir === 'up') {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
+          } else if (dir === 'down') {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = (0.6 + Math.random() * 1.2) * settings.speed;
+          } else if (dir === 'left') {
+            this.vx = -(0.6 + Math.random() * 1.2) * settings.speed;
+            this.vy = (Math.random() - 0.5) * 1.5;
+          } else if (dir === 'right') {
+            this.vx = (0.6 + Math.random() * 1.2) * settings.speed;
+            this.vy = (Math.random() - 0.5) * 1.5;
+          } else {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
+          }
         }
         update(micMult) {
           // Movimiento horizontal influenciado por turbulencia y viento
@@ -1291,8 +1331,24 @@
           this.radius = 10 + Math.random() * 20;
           this.life = 0;
           this.ttl = (60 + Math.random() * 80) * settings.height;
-          this.vx = (Math.random() - 0.5) * 1.5;
-          this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
+          // Asignar velocidad inicial según la dirección
+          const dirC = settings.direction || 'up';
+          if (dirC === 'up') {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
+          } else if (dirC === 'down') {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = (0.6 + Math.random() * 1.2) * settings.speed;
+          } else if (dirC === 'left') {
+            this.vx = -(0.6 + Math.random() * 1.2) * settings.speed;
+            this.vy = (Math.random() - 0.5) * 1.5;
+          } else if (dirC === 'right') {
+            this.vx = (0.6 + Math.random() * 1.2) * settings.speed;
+            this.vy = (Math.random() - 0.5) * 1.5;
+          } else {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = -(0.6 + Math.random() * 1.2) * settings.speed;
+          }
         }
         update(micMult) {
           this.x += this.vx + wind * 0.5;
@@ -1485,6 +1541,10 @@
         settings.grain = document.getElementById('grainToggle').checked;
         settings.drift = document.getElementById('driftToggle').checked;
         settings.themeLight = document.getElementById('lightToggle').checked;
+        // Actualizar dirección si existe el selector
+        if (document.getElementById('direction2d')) {
+          settings.direction = document.getElementById('direction2d').value;
+        }
         // Reinitialize based on new settings
         initMode();
         // Update canvas background according to theme
@@ -1508,6 +1568,9 @@
       document.getElementById('grainToggle').addEventListener('change', updateSettings);
       document.getElementById('driftToggle').addEventListener('change', updateSettings);
       document.getElementById('lightToggle').addEventListener('change', updateSettings);
+      if (document.getElementById('direction2d')) {
+        document.getElementById('direction2d').addEventListener('change', updateSettings);
+      }
 
       // Ajustar resolución (rendimiento) cambiando el factor de densidad de píxeles
       document.getElementById('pixel2d').addEventListener('input', (e) => {
@@ -1626,29 +1689,75 @@
       // Color del clon
       document.getElementById('color3d').addEventListener('input', (e) => {
         settings3d.color = e.target.value;
+        // Update clone colors immediately when the base color changes
+        updateCloneColors3d(false);
       });
-      // Cargar modelo OBJ
+      // Cargar modelo 3D (OBJ, GLTF o GLB) y ajustar clones
       document.getElementById('modelFile').addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const text = evt.target.result;
-          const geom = parseOBJ(text);
-          if (geom) {
-            modelGeometry3d = geom;
-            init3d();
+        const ext = file.name.split('.').pop().toLowerCase();
+        // Soporte OBJ a través de THREE.OBJLoader o fallback al parser incorporado
+        if (ext === 'obj') {
+          // Si existe OBJLoader (Three.js), usarlo; de lo contrario, usar el parser OBJ simple
+          if (typeof THREE !== 'undefined' && THREE.OBJLoader) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              const text = evt.target.result;
+              const loader = new THREE.OBJLoader();
+              const obj = loader.parse(text);
+              window.threeModel = obj;
+              centerModel3d();
+              init3d();
+              // Crear clones con el nuevo modelo
+              createClones3d();
+            };
+            reader.readAsText(file);
           } else {
-            console.error('No se pudo cargar el modelo. Asegúrate de que sea un OBJ válido.');
-            modelGeometry3d = null;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              const text = evt.target.result;
+              const geom = parseOBJ(text);
+              if (geom) {
+                modelGeometry3d = geom;
+                window.threeModel = null;
+                init3d();
+              } else {
+                console.error('No se pudo cargar el modelo. Asegúrate de que sea un OBJ válido.');
+                modelGeometry3d = null;
+              }
+            };
+            reader.readAsText(file);
           }
-        };
-        reader.readAsText(file);
+        } else {
+          // Para GLTF/GLB usar GLTFLoader si está disponible
+          if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              const arrayBuffer = evt.target.result;
+              const loader = new THREE.GLTFLoader();
+              loader.parse(arrayBuffer, '', (gltf) => {
+                window.threeModel = gltf.scene;
+                centerModel3d();
+                init3d();
+                // Crear clones con el nuevo modelo
+                createClones3d();
+              }, (error) => {
+                console.error('Error al cargar GLTF/GLB:', error);
+              });
+            };
+            reader.readAsArrayBuffer(file);
+          } else {
+            console.error('GLTFLoader no disponible, el modelo GLB no se puede cargar');
+          }
+        }
       });
       // Número de clones
       document.getElementById('count3d').addEventListener('input', (e) => {
         settings3d.count = parseInt(e.target.value, 10) || 1;
         init3d();
+        // Recreate clones with new count
+        if (typeof THREE !== 'undefined') createClones3d();
       });
       // Escala base
       document.getElementById('scale3d').addEventListener('input', (e) => {
@@ -1662,6 +1771,7 @@
       document.getElementById('spread3d').addEventListener('input', (e) => {
         settings3d.spread = parseFloat(e.target.value);
         init3d();
+        // No need to recreate clones; spacing is handled in draw3d via position update
       });
       // Micrófono para 3D
       document.getElementById('mic3d').addEventListener('change', (e) => {
@@ -1688,25 +1798,150 @@
         settings3d.themeLight = e.target.checked;
         // Cambiar color de fondo del lienzo acorde al tema
         document.getElementById('canvas2d').style.backgroundColor = settings3d.themeLight ? '#ffffff' : '#000000';
+        // Actualizar color de fondo del renderer de Three.js si está inicializado
+        if (typeof THREE !== 'undefined' && threeRenderer) {
+          threeRenderer.setClearColor(settings3d.themeLight ? 0xffffff : 0x000000, 1);
+        }
       });
       // Ocultar y mostrar panel en 3D
       document.getElementById('hidePanel3d').addEventListener('click', () => {
         document.getElementById('controls3d').style.display = 'none';
         document.getElementById('controls3dCollapsed').style.display = 'block';
+        const brand = document.getElementById('branding');
+        if (brand) brand.style.display = 'none';
       });
       document.getElementById('showPanel3d').addEventListener('click', () => {
         document.getElementById('controls3d').style.display = 'block';
         document.getElementById('controls3dCollapsed').style.display = 'none';
+        const brand = document.getElementById('branding');
+        if (brand) brand.style.display = 'block';
       });
+
+      // -------------------------------------------------------------------
+      // Three.js based 3D rendering
+      // Variables for Three.js scene, camera, renderer and group of clones
+      let threeScene = null;
+      let threeCamera = null;
+      let threeRenderer = null;
+      let threeGroup = null;
+      let threeInitialized = false;
+
+      // Ensure Three.js scene and renderer are created
+      function setupThree() {
+        if (threeInitialized) return;
+        const container = document.getElementById('threeContainer');
+        const w = container.clientWidth || window.innerWidth;
+        const h = container.clientHeight || window.innerHeight;
+        threeRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        threeRenderer.setSize(w, h);
+        container.innerHTML = '';
+        container.appendChild(threeRenderer.domElement);
+        threeScene = new THREE.Scene();
+        threeCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+        threeCamera.position.set(0, 0, 10);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        threeScene.add(ambient);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        threeScene.add(dirLight);
+        threeGroup = new THREE.Group();
+        threeScene.add(threeGroup);
+        threeInitialized = true;
+      }
+
+      // Center and normalize a loaded model (scale to unit size and center at origin)
+      function centerModel3d() {
+        if (!window.threeModel) return;
+        const box = new THREE.Box3().setFromObject(window.threeModel);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const scale = 1 / maxDim;
+        window.threeModel.scale.set(scale, scale, scale);
+        box.setFromObject(window.threeModel);
+        const center = box.getCenter(new THREE.Vector3());
+        window.threeModel.position.sub(center);
+      }
+
+      // Create clones based on loaded model or default sphere
+      function createClones3d() {
+        setupThree();
+        if (!threeGroup) return;
+        threeGroup.clear();
+        const total = Math.max(1, settings3d.count);
+        if (window.threeModel) {
+          for (let i = 0; i < total; i++) {
+            const clone = window.threeModel.clone();
+            clone.traverse((child) => {
+              if (child.material) child.material = child.material.clone();
+            });
+            clone.userData.index = i;
+            threeGroup.add(clone);
+          }
+        } else {
+          // Default to simple spheres using Three.js if no model is loaded
+          const geometry = new THREE.SphereGeometry(1, 16, 16);
+          for (let i = 0; i < total; i++) {
+            // Use a standard material to allow lighting and shading
+            const material = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings3d.color) });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.userData.index = i;
+            threeGroup.add(mesh);
+          }
+        }
+      }
+
+      // Apply color inversion on beat
+      function updateCloneColors3d(invert) {
+        const targetColor = invert ? invertColor3D(settings3d.color) : settings3d.color;
+        if (threeGroup) {
+          threeGroup.traverse((child) => {
+            if (child.material && child.material.color) {
+              child.material.color.set(targetColor);
+            }
+          });
+        }
+      }
+
+      // Override draw3d to use Three.js renderer when available
+      function draw3d(micMult, beat) {
+        if (threeGroup && threeRenderer) {
+          const time = Date.now() * 0.001;
+          const radius = settings3d.spread;
+          const total = Math.max(1, settings3d.count);
+          threeGroup.children.forEach((clone) => {
+            const idx = clone.userData.index || 0;
+            const angle = (idx / total) * Math.PI * 2 + time * settings3d.speed;
+            clone.position.x = Math.cos(angle) * radius;
+            clone.position.z = Math.sin(angle) * radius;
+            clone.rotation.x = settings3d.wind * Math.PI;
+            const scaleFactor = settings3d.scale * (1 + micMult * settings3d.micSensitivity * 2);
+            clone.scale.set(scaleFactor, scaleFactor, scaleFactor);
+          });
+          updateCloneColors3d(beat);
+          // Background color according to theme
+          if (threeRenderer) {
+            threeRenderer.setClearColor(settings3d.themeLight ? 0xffffff : 0x000000, 1);
+            threeRenderer.render(threeScene, threeCamera);
+          }
+          return;
+        }
+        // fallback: if Three.js not initialized use existing custom 3D engine (no-op)
+      }
 
       // Ocultar y mostrar panel en 2D
       document.getElementById('hidePanel2d').addEventListener('click', () => {
         document.getElementById('controls2d').style.display = 'none';
         document.getElementById('controls2dCollapsed').style.display = 'block';
+        // Ocultar también la marca cuando se oculta el panel
+        const brand = document.getElementById('branding');
+        if (brand) brand.style.display = 'none';
       });
       document.getElementById('showPanel2d').addEventListener('click', () => {
         document.getElementById('controls2d').style.display = 'block';
         document.getElementById('controls2dCollapsed').style.display = 'none';
+        // Mostrar la marca al volver a mostrar el panel
+        const brand = document.getElementById('branding');
+        if (brand) brand.style.display = 'block';
       });
 
       // Inicializar y arrancar animación
@@ -1752,23 +1987,26 @@
             isReactMounted = true;
           }
         } else if (mode === '3d') {
-          // Mostrar modo 3D utilizando el mismo lienzo 2D
+          // Mostrar modo 3D utilizando Three.js
           document.getElementById('flame-wrapper').style.display = 'none';
           // Ocultar controles de 2D
           document.getElementById('controls2d').style.display = 'none';
           document.getElementById('controls2dCollapsed').style.display = 'none';
-          // Asegurar que el lienzo esté visible
-          document.getElementById('canvas2d').style.display = 'block';
-          // Ocultar contenedor de Three.js si existe
-          document.getElementById('threeContainer').style.display = 'none';
-          // Mostrar panel de 3D (y ocultar la versión colapsada)
+          // Ocultar lienzo 2D
+          document.getElementById('canvas2d').style.display = 'none';
+          // Mostrar contenedor de Three.js
+          document.getElementById('threeContainer').style.display = 'block';
+          // Mostrar panel de 3D y ocultar panel colapsado
           document.getElementById('controls3dCollapsed').style.display = 'none';
           document.getElementById('controls3d').style.display = 'block';
           // Cambiar a modo 3D dentro del motor 2D/3D
           window._update2dMode('3d');
-          // Inicializar o actualizar clones 3D si la función está disponible
+          // Inicializar clones 3D y recrear clones
           if (typeof window.init3d === 'function') {
             window.init3d();
+          }
+          if (typeof THREE !== 'undefined') {
+            createClones3d();
           }
         } else {
           // Mostrar modos 2D (spheres, abstract, custom)
@@ -1800,10 +2038,10 @@
         // Ocultar controles de 2D
         document.getElementById('controls2d').style.display = 'none';
         document.getElementById('controls2dCollapsed').style.display = 'none';
-        // Asegurar que el lienzo esté visible
-        document.getElementById('canvas2d').style.display = 'block';
-        // Ocultar contenedor de Three.js (sin uso en esta versión)
-        document.getElementById('threeContainer').style.display = 'none';
+        // Ocultar lienzo 2D
+        document.getElementById('canvas2d').style.display = 'none';
+        // Mostrar contenedor de Three.js
+        document.getElementById('threeContainer').style.display = 'block';
         document.getElementById('controls3d').style.display = 'block';
         document.getElementById('controls3dCollapsed').style.display = 'none';
         // Cambiar a modo 3D en el motor 2D/3D
@@ -1811,6 +2049,9 @@
         // Inicializar clones 3D
         if (typeof window.init3d === 'function') {
           window.init3d();
+        }
+        if (typeof THREE !== 'undefined') {
+          createClones3d();
         }
       } else {
         document.getElementById('flame-wrapper').style.display = 'none';
