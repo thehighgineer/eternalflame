@@ -205,7 +205,7 @@
       </div>
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Escala</label>
-        <input type="range" id="scale3d" min="0.1" max="3" step="0.1" value="1" class="w-44" />
+        <input type="range" id="scale3d" min="0.1" max="3" step="0.1" value="0.5" class="w-44" />
       </div>
       <div class="grid grid-cols-[1fr_auto] items-center gap-3">
         <label class="text-xs opacity-80">Vel. rotación</label>
@@ -971,11 +971,18 @@
       let wind = 0;
       let targetWind = 0;
 
+      // Offsets for abstract mode translations (for directional movement). These
+      // values accumulate each frame to shift the entire abstract pattern
+      // horizontally or vertically based on the selected direction. They are
+      // wrapped within the canvas dimensions to avoid drifting off-screen.
+      let abstractOffsetX = 0;
+      let abstractOffsetY = 0;
+
       // 3D engine: parámetros y datos
       const settings3d = {
         color: '#ffffff', // color base de los clones
         count: 5,        // número de clones a dibujar
-        scale: 1,        // escala base de cada clon
+        scale: 0.5,        // escala base de cada clon (valor por defecto reducido)
         speed: 1,        // velocidad de rotación (y)
         spread: 2,       // radio de separación de clones
         micSensitivity: 1, // sensibilidad del micrófono
@@ -1430,8 +1437,11 @@
         for (const sh of abstracts) {
           sh.angle += sh.speed * settings.speed;
           sh.radius += Math.sin(sh.angle * 0.5) * 0.5;
-          const x = cx + sh.radius * Math.cos(sh.angle);
-          const y = cy + sh.radius * Math.sin(sh.angle);
+        // Apply the directional offsets accumulated in animate() to shift the
+        // pattern horizontally or vertically. This gives control over
+        // movement direction in abstract mode (similar to spheres and custom).
+        const x = cx + sh.radius * Math.cos(sh.angle) + abstractOffsetX;
+        const y = cy + sh.radius * Math.sin(sh.angle) + abstractOffsetY;
           const s = sh.size * settings.size * micMult;
           ctx.beginPath();
           // Invertir colores de cada forma en beat
@@ -1472,6 +1482,22 @@
           beat = micLevel * settings3d.micSensitivity > 0.12;
           draw3d(micMult, beat);
         } else {
+          // Update offset translation for abstract mode and other 2D modes based
+          // on the selected direction. This creates a feeling of movement
+          // sideways or vertically for abstract shapes by shifting the entire
+          // pattern. The offset wraps around the canvas dimensions.
+          const dir = settings.direction;
+          // Use the speed slider to influence translation speed; scale factor
+          const shift = settings.speed * 2;
+          if (dir === 'left') abstractOffsetX -= shift;
+          else if (dir === 'right') abstractOffsetX += shift;
+          if (dir === 'up') abstractOffsetY -= shift;
+          else if (dir === 'down') abstractOffsetY += shift;
+          // Wrap offsets within the canvas bounds
+          if (abstractOffsetX > width) abstractOffsetX = -width;
+          if (abstractOffsetX < -width) abstractOffsetX = width;
+          if (abstractOffsetY > height) abstractOffsetY = -height;
+          if (abstractOffsetY < -height) abstractOffsetY = height;
           micLevel = getMicLevel();
           micMult = 1 + micLevel * 10 * settings.micSensitivity;
           beat = micLevel * settings.micSensitivity > 0.12;
@@ -1892,14 +1918,19 @@
 
       // Apply color inversion on beat
       function updateCloneColors3d(invert) {
+        // Only update colors for meshes without textures. If the material has a map
+        // (texture) we respect the original imported appearance. This allows GLB
+        // models to retain their materials and textures. For simple meshes (like
+        // default spheres) we override the color and apply inversion on beats.
+        if (!threeGroup) return;
         const targetColor = invert ? invertColor3D(settings3d.color) : settings3d.color;
-        if (threeGroup) {
-          threeGroup.traverse((child) => {
-            if (child.material && child.material.color) {
-              child.material.color.set(targetColor);
-            }
-          });
-        }
+        threeGroup.traverse((child) => {
+          if (child.material && child.material.color) {
+            // Skip materials that use a texture map; they already define color via the texture
+            if (child.material.map) return;
+            child.material.color.set(targetColor);
+          }
+        });
       }
 
       // Override draw3d to use Three.js renderer when available
