@@ -1049,21 +1049,33 @@
         return '#' + r + g + b;
       }
 
-      function drawParticles(micMult) {
+    // Invertir un color hexadecimal (por ejemplo #ffcc00 -> #0033ff)
+    function invertColor(hex) {
+      const h = hex.replace('#', '');
+      const num = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+      const inv = 0xffffff ^ num;
+      return '#' + inv.toString(16).padStart(6, '0');
+    }
+
+      function drawParticles(micMult, beat) {
         for (const p of particles) {
           p.update(micMult);
-          const r = p.radius * settings.size;
+          // Aumentar el tamaño de la partícula según la intensidad del micrófono
+          const r = p.radius * settings.size * micMult;
+          // Invertir colores en los golpes (beat)
+          const col1 = beat ? invertColor(settings.color1) : settings.color1;
+          const col2 = beat ? invertColor(settings.color2) : settings.color2;
           // gradiente radial para las esferas
           const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * settings.height * settings.glow);
-          grad.addColorStop(0, settings.color1);
-          grad.addColorStop(1, settings.color2 + '00');
+          grad.addColorStop(0, col1);
+          grad.addColorStop(1, col2 + '00');
           ctx.beginPath();
           ctx.fillStyle = grad;
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.fill();
         }
       }
-      function drawAbstract(micMult) {
+      function drawAbstract(micMult, beat) {
         const cx = width / 2;
         const cy = height / 2;
         for (const sh of abstracts) {
@@ -1073,18 +1085,30 @@
           const y = cy + sh.radius * Math.sin(sh.angle);
           const s = sh.size * settings.size * micMult;
           ctx.beginPath();
-          ctx.fillStyle = sh.color;
+          // Invertir colores de cada forma en beat
+          const fillCol = beat ? invertColor(sh.color) : sh.color;
+          ctx.fillStyle = fillCol;
           ctx.arc(x, y, s, 0, Math.PI * 2);
           ctx.fill();
         }
       }
-      function drawCustom(micMult) {
+      // Dibuja las partículas personalizadas (PNG) aplicando reactividad al micrófono.
+      // Las imágenes crecen con micMult y se invierten los colores cuando se detecta un "beat".
+      function drawCustom(micMult, beat) {
         if (!settings.image) return;
+        // Guardar estado del contexto para aislar filtros
+        ctx.save();
+        // Aplicar filtro de inversión si hay beat
+        ctx.filter = beat ? 'invert(1)' : 'none';
         for (const p of customParticles) {
           p.update(micMult);
-          const r = p.radius * settings.size;
+          // Aumentar tamaño con micMult
+          const r = p.radius * settings.size * micMult;
           ctx.drawImage(settings.image, p.x - r, p.y - r, r * 2, r * 2);
         }
+        // Restaurar el filtro y el estado del contexto
+        ctx.filter = 'none';
+        ctx.restore();
       }
 
       function animate() {
@@ -1094,13 +1118,15 @@
 
         const micLevel = getMicLevel();
         const micMult = 1 + micLevel * 10 * settings.micSensitivity;
-
+        // Detectar un "beat" si el nivel supera un umbral
+        const beat = micLevel * settings.micSensitivity > 0.12;
         if (settings.mode === 'spheres') {
-          drawParticles(micMult);
+          drawParticles(micMult, beat);
         } else if (settings.mode === 'abstract') {
-          drawAbstract(micMult);
+          drawAbstract(micMult, beat);
         } else if (settings.mode === 'custom') {
-          drawCustom(micMult);
+          // Pasar el parámetro beat para invertir colores en modo personalizado
+          drawCustom(micMult, beat);
         }
 
         // Ajustar viento objetivo según drift o puntero
@@ -1246,40 +1272,82 @@
      * micrófono y viento. Proporciona un panel que puede minimizarse.
      */
     (function() {
-      // Variables de escena 3D
+      // Nuevo código 3D: crea una escena con clones y permite cargar modelos.
       let scene = null;
       let camera = null;
       let renderer = null;
-      let model3d = null;
-      let clones3d = [];
-      let threeInitialized = false;
-
-      // Configuración para el modo 3D
+      let clones = [];
+      let loadedModel = null;
+      let micCtx3d, micAnalyser3d, micData3d;
+      let micOn3d = false;
+      let colorInverted3d = false;
+      // Configuración de parámetros 3D
       const settings3d = {
         color: '#ffffff',
         count: 1,
         scale: 1,
         speed: 1,
         spread: 2,
-        micEnabled: false,
         micSensitivity: 1,
         wind: 0,
         drift: false,
         themeLight: false
       };
-      // Micrófono para 3D
-      let micCtx3d;
-      let micAnalyser3d;
-      let micData3d;
-      let micOn3d = false;
+      function initScene3d() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 6);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        const container = document.getElementById('threeContainer');
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+        // Luces básicas
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambient);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+        dir.position.set(5, 5, 5);
+        scene.add(dir);
+        window.addEventListener('resize', onResize3d);
+        createClones3d();
+        animate3d();
+      }
+      function onResize3d() {
+        if (!renderer || !camera) return;
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      }
+      function createClones3d() {
+        if (!scene) return;
+        clones.forEach(obj => scene.remove(obj));
+        clones = [];
+        let base = loadedModel;
+        if (!base) {
+          const geom = new THREE.SphereGeometry(0.5, 32, 32);
+          const mat = new THREE.MeshStandardMaterial({ color: settings3d.color });
+          base = new THREE.Mesh(geom, mat);
+        }
+        const total = Math.max(1, settings3d.count);
+        for (let i = 0; i < total; i++) {
+          const clone = base.clone();
+          const angle = (i / total) * Math.PI * 2;
+          const radius = settings3d.spread;
+          clone.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+          clone.scale.set(settings3d.scale, settings3d.scale, settings3d.scale);
+          clones.push(clone);
+          scene.add(clone);
+        }
+      }
       function initMic3d() {
         if (micOn3d) return;
         navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
           micCtx3d = new (window.AudioContext || window.webkitAudioContext)();
           micAnalyser3d = micCtx3d.createAnalyser();
+          micAnalyser3d.fftSize = 256;
           const source = micCtx3d.createMediaStreamSource(stream);
           source.connect(micAnalyser3d);
-          micAnalyser3d.fftSize = 256;
           micData3d = new Uint8Array(micAnalyser3d.frequencyBinCount);
           micOn3d = true;
         }).catch((err) => {
@@ -1295,130 +1363,99 @@
         }
         return sum / micData3d.length / 255;
       }
-
-      function init3d() {
-        // Configurar escena, cámara y renderer
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 6);
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.getElementById('threeContainer').innerHTML = '';
-        document.getElementById('threeContainer').appendChild(renderer.domElement);
-
-        // Luces
-        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambient);
-        const directional = new THREE.DirectionalLight(0xffffff, 0.6);
-        directional.position.set(5, 5, 5);
-        scene.add(directional);
-
-        // Escucha cambios de tamaño de la ventana
-        window.addEventListener('resize', () => {
-          if (!renderer || !camera) return;
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-        });
-
-        animate3d();
+      function invertColor3d(hex) {
+        const h = hex.replace('#', '');
+        const num = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+        const inv = 0xffffff ^ num;
+        return '#' + inv.toString(16).padStart(6, '0');
       }
-
-      function applyColor(object) {
-        object.traverse((child) => {
-          if (child.isMesh) {
-            child.material = child.material.clone();
-            if (child.material.color) {
-              child.material.color.set(settings3d.color);
-            }
-          }
-        });
-      }
-
-      function loadModel(dataUrl) {
-        // Eliminar clones anteriores
-        clones3d.forEach((c) => scene && scene.remove(c));
-        clones3d = [];
-        model3d = null;
-        const loader = new THREE.GLTFLoader();
-        loader.parse = loader.parse.bind(loader);
-        loader.load(dataUrl, (gltf) => {
-          model3d = gltf.scene;
-          applyColor(model3d);
-          updateClones3d();
-        }, undefined, (e) => {
-          console.error('Error al cargar modelo 3D:', e);
-        });
-      }
-
-      function updateClones3d() {
-        // Eliminar clones existentes
-        clones3d.forEach((c) => scene && scene.remove(c));
-        clones3d = [];
-        if (!model3d || !scene) return;
-        const total = Math.max(1, settings3d.count);
-        for (let i = 0; i < total; i++) {
-          const clone = model3d.clone();
-          const angle = (i / total) * Math.PI * 2;
-          const radius = settings3d.spread;
-          clone.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-          clone.scale.set(settings3d.scale, settings3d.scale, settings3d.scale);
-          clones3d.push(clone);
-          scene.add(clone);
-        }
-      }
-
       function animate3d() {
         requestAnimationFrame(animate3d);
         if (!renderer || !scene || !camera) return;
         const micLevel = getMicLevel3d();
         const micMult = 1 + micLevel * settings3d.micSensitivity * 5;
-        for (const obj of clones3d) {
+        const beat = micLevel * settings3d.micSensitivity > 0.12;
+        if (beat && !colorInverted3d) {
+          const inv = invertColor3d(settings3d.color);
+          clones.forEach(obj => {
+            obj.traverse(child => {
+              if (child.isMesh && child.material && child.material.color) {
+                child.material = child.material.clone();
+                child.material.color.set(inv);
+              }
+            });
+          });
+          colorInverted3d = true;
+        } else if (!beat && colorInverted3d) {
+          clones.forEach(obj => {
+            obj.traverse(child => {
+              if (child.isMesh && child.material && child.material.color) {
+                child.material.color.set(settings3d.color);
+              }
+            });
+          });
+          colorInverted3d = false;
+        }
+        clones.forEach(obj => {
           obj.rotation.y += settings3d.speed * 0.01;
           obj.rotation.x += settings3d.wind * 0.01;
           obj.scale.set(settings3d.scale * micMult, settings3d.scale * micMult, settings3d.scale * micMult);
-        }
-        // Auto drift para viento
+        });
         if (settings3d.drift) {
           settings3d.wind = Math.sin(Date.now() * 0.0005) * 2;
         }
-        // Ajustar color de fondo
-        renderer.setClearColor(settings3d.themeLight ? 0xffffff : 0x000000, 0);
+        renderer.setClearColor(settings3d.themeLight ? 0xffffff : 0x000000, 1);
         renderer.render(scene, camera);
       }
-
-      // Eventos de UI para 3D
+      function loadModel3d(file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const arrayBuffer = ev.target.result;
+          const loader = new THREE.GLTFLoader();
+          loader.parse(arrayBuffer, '', (gltf) => {
+            loadedModel = gltf.scene;
+            loadedModel.traverse(child => {
+              if (child.isMesh && child.material && child.material.color) {
+                child.material = child.material.clone();
+                child.material.color.set(settings3d.color);
+              }
+            });
+            createClones3d();
+          }, (e) => {
+            console.error('Error al cargar modelo:', e);
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+      // Controladores de UI para 3D
       document.getElementById('modelFile').addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            loadModel(ev.target.result);
-          };
-          reader.readAsDataURL(file);
-        }
+        if (file) loadModel3d(file);
       });
       document.getElementById('color3d').addEventListener('input', (e) => {
         settings3d.color = e.target.value;
-        if (model3d) {
-          applyColor(model3d);
-        }
+        clones.forEach(obj => {
+          obj.traverse(child => {
+            if (child.isMesh && child.material && child.material.color) {
+              child.material.color.set(settings3d.color);
+            }
+          });
+        });
       });
       document.getElementById('count3d').addEventListener('input', (e) => {
         settings3d.count = parseInt(e.target.value, 10) || 1;
-        updateClones3d();
+        createClones3d();
       });
       document.getElementById('scale3d').addEventListener('input', (e) => {
         settings3d.scale = parseFloat(e.target.value);
-        updateClones3d();
+        createClones3d();
       });
       document.getElementById('speed3d').addEventListener('input', (e) => {
         settings3d.speed = parseFloat(e.target.value);
       });
       document.getElementById('spread3d').addEventListener('input', (e) => {
         settings3d.spread = parseFloat(e.target.value);
-        updateClones3d();
+        createClones3d();
       });
       document.getElementById('mic3d').addEventListener('change', (e) => {
         if (e.target.checked) {
@@ -1447,17 +1484,16 @@
         document.getElementById('controls3d').style.display = 'block';
         document.getElementById('controls3dCollapsed').style.display = 'none';
       });
-
-      // Exponer inicializador global
+      // Exponer inicializador global para actualizar clones
       window._init3d = function() {
-        if (!threeInitialized) {
-          init3d();
-          threeInitialized = true;
+        if (!scene) {
+          initScene3d();
         } else {
-          // Forzar actualización de clones al volver a modo 3D
-          updateClones3d();
+          createClones3d();
         }
       };
+      // La escena 3D se inicializará cuando el usuario elija el modo 3D.
+      //initScene3d();
     })();
 
     // Selección global de modos y montaje/desmontaje de React
