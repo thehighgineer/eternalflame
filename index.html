@@ -59,6 +59,7 @@
       <option value="abstract">Abstracto</option>
       <option value="custom">Personalizado</option>
       <option value="bars">Barras</option>
+      <option value="lines">Líneas</option>
     </select>
   </div>
 
@@ -456,7 +457,8 @@
             float aspect = u_res.x/u_res.y;
             vec2 p = vec2((uv.x-0.5)*aspect, uv.y);
 
-            float t = u_time * (0.3 + u_speed*0.7) * (1.0 + u_audio*0.35);
+            // Increase audio modulation impact for more visible mic reactivity
+            float t = u_time * (0.3 + u_speed*0.7) * (1.0 + u_audio*1.0);
             vec2 seed = vec2(u_seed, u_seed*1.618);
 
             vec2 q = vec2(
@@ -464,22 +466,22 @@
               fbm(p*2.0 + vec2(5.2, t*1.2) - seed, u_detail)
             );
             vec2 r = vec2(
-              fbm(p*3.0 + (u_turb + u_audio*0.6)*q + vec2(1.7, t*1.7) + seed*2.0, u_detail),
-              fbm(p*3.0 + (u_turb + u_audio*0.6)*q + vec2(9.2, t*1.7) - seed*2.0, u_detail)
+              fbm(p*3.0 + (u_turb + u_audio*1.2)*q + vec2(1.7, t*1.7) + seed*2.0, u_detail),
+              fbm(p*3.0 + (u_turb + u_audio*1.2)*q + vec2(9.2, t*1.7) - seed*2.0, u_detail)
             );
 
             float flameWidth = u_width;
-            float flameShape = 1.0 - (abs(p.x*flameWidth) + (1.0-uv.y)*(u_height - u_audio*0.5));
+            float flameShape = 1.0 - (abs(p.x*flameWidth) + (1.0-uv.y)*(u_height - u_audio*1.0));
             flameShape = smoothstep(-1.2, 0.5, flameShape);
 
-            float n = fbm(p*2.0 + r*1.2 + vec2((u_wind + u_audio*0.2)*t*0.3, -t*2.0), u_detail);
+            float n = fbm(p*2.0 + r*1.2 + vec2((u_wind + u_audio*0.6)*t*0.3, -t*2.0), u_detail);
             n = pow(clamp(n,0.0,1.0), 1.2);
 
             float intensity = clamp(n*flameShape, 0.0, 1.0);
-            intensity = pow(intensity, u_contrast) * (1.0 + u_audio*0.4);
+            intensity = pow(intensity, u_contrast) * (1.0 + u_audio*1.0);
 
             vec3 col = mix(u_bg, palette(intensity, u_base, u_mid, u_hot), intensity);
-            float glow = smoothstep(0.0, 0.8, intensity) * (u_glow + u_audio*1.0);
+            float glow = smoothstep(0.0, 0.8, intensity) * (u_glow + u_audio*2.0);
             col += glow * vec3(1.0, 0.7, 0.3);
 
             if(u_grain > 0.5){
@@ -953,6 +955,8 @@
       let particles = [];
       let abstracts = [];
       let customParticles = [];
+      // Arreglo de líneas para el nuevo modo "Líneas"
+      let lines = [];
       let wind = 0;
       let targetWind = 0;
 
@@ -1461,6 +1465,51 @@
         // No hay datos persistentes para las barras; se generan dinámicamente durante el dibujo
       }
 
+      // Inicializar el nuevo modo "Líneas". Las líneas orbitan alrededor del
+      // centro con diferentes radios y velocidades. El número de líneas se
+      // controla mediante el slider de "Cantidad".
+      function initLines() {
+        lines = [];
+        const n = Math.max(1, settings.count);
+        const maxRad = Math.min(width, height) * 0.5;
+        for (let i = 0; i < n; i++) {
+          lines.push({
+            angle: Math.random() * Math.PI * 2,
+            radius: Math.random() * maxRad,
+            speed: (Math.random() - 0.5) * 0.5,
+            // Selecciona un color al azar entre los cuatro definidos
+            color: randomColor(),
+          });
+        }
+      }
+
+      // Dibuja el visualizador de líneas tipo "spider web". Cada línea
+      // conecta dos puntos en el círculo central y reacciona al micrófono
+      // cambiando grosor y color en los beats.
+      function drawLines(micMult, beat) {
+        const cx = width / 2;
+        const cy = height / 2;
+        const thickness = settings.size * micMult * 2;
+        ctx.lineWidth = thickness;
+        for (const ln of lines) {
+          // Actualizar el ángulo dependiendo de la velocidad y del slider de velocidad
+          ln.angle += ln.speed * settings.speed * 0.05;
+          const r = ln.radius;
+          const x1 = cx + Math.cos(ln.angle) * r;
+          const y1 = cy + Math.sin(ln.angle) * r;
+          // El segundo punto se calcula con un desfase de 90 grados y una
+          // longitud reducida para crear un efecto de tela de araña
+          const x2 = cx + Math.cos(ln.angle + Math.PI * 0.5) * r * 0.5;
+          const y2 = cy + Math.sin(ln.angle + Math.PI * 0.5) * r * 0.5;
+          const col = beat ? invertColor(ln.color) : ln.color;
+          ctx.beginPath();
+          ctx.strokeStyle = col;
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      }
+
       // Dibujar visualizador de barras al estilo de reproductores clásicos
       function drawBars(micMult, beat) {
         // Recalcular el nivel del micrófono para cada cuadro para mayor precisión
@@ -1512,6 +1561,8 @@
           drawCustom(micMult, beat);
         } else if (settings.mode === 'bars') {
           drawBars(micMult, beat);
+        } else if (settings.mode === 'lines') {
+          drawLines(micMult, beat);
         }
 
         // Ajustar viento objetivo según drift o puntero
@@ -1551,6 +1602,8 @@
           initCustom();
         } else if (settings.mode === 'bars') {
           initBars();
+        } else if (settings.mode === 'lines') {
+          initLines();
         }
       }
 
