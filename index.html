@@ -968,6 +968,8 @@
       let customParticles = [];
       // Arreglo de líneas para el nuevo modo "Líneas"
       let lines = [];
+      // Semillas para el modo de llama 2D (nuevo "original" reprogramado)
+      let flameSeeds = [];
       let wind = 0;
       let targetWind = 0;
 
@@ -1606,6 +1608,53 @@
         }
       }
 
+      // Inicializa el modo "flame" (nuevo modo original reprogramado). Precalcula
+      // semillas de ruido para cada columna y restablece el contador de viento.
+      function initFlame() {
+        flameSeeds = [];
+        const step = 4; // ancho de cada columna de la llama
+        const cols = Math.ceil(width / step);
+        for (let i = 0; i < cols; i++) {
+          flameSeeds.push(Math.random() * 20.0);
+        }
+      }
+
+      // Dibuja la llama 2D reprogramada. Se basa en barras suaves con altura y color
+      // modulados por ruido, turbulencia y nivel de micrófono. El color se
+      // invierte en los beats para destacar los golpes.
+      function drawFlame(micMult, beat) {
+        const step = 4;
+        const cols = flameSeeds.length;
+        const time = Date.now() * 0.0005 * settings.speed;
+        for (let i = 0; i < cols; i++) {
+          // Calcular ruido senoidal modulado por turbulencia aleatoria
+          const seed = flameSeeds[i];
+          let noise = Math.sin(seed + time + settings.turb * Math.random()) * 0.5 + 0.5;
+          // Altura base de la barra con influencia del micrófono y altura del usuario
+          let barHeight = (noise + micMult * 0.4) * settings.height * height;
+          // Limitar la altura dentro del lienzo
+          barHeight = Math.max(2, Math.min(height, barHeight));
+          // Posición x de la barra
+          const xPos = i * step;
+          // Calcular color según la fracción de la altura
+          const t = barHeight / height;
+          let col;
+          if (t < 1 / 3) {
+            col = lerpColorHex(settings.color1, settings.color2, t * 3);
+          } else if (t < 2 / 3) {
+            col = lerpColorHex(settings.color2, settings.color3, (t - 1 / 3) * 3);
+          } else {
+            col = lerpColorHex(settings.color3, settings.color4, (t - 2 / 3) * 3);
+          }
+          // Invertir color en los beats para resaltar los golpes
+          if (beat) {
+            col = invertColor3D(col);
+          }
+          ctx.fillStyle = col;
+          ctx.fillRect(xPos, height - barHeight, step, barHeight);
+        }
+      }
+
       // Dibujar visualizador de barras al estilo de reproductores clásicos
       function drawBars(micMult, beat) {
         // Recalcular el nivel del micrófono para cada cuadro para mayor precisión
@@ -1649,7 +1698,9 @@
         const micMult = 1 + micLevel * 10 * settings.micSensitivity;
         const beat = micLevel * settings.micSensitivity > 0.12;
         // Draw the appropriate 2D visualizer based on the selected mode
-        if (settings.mode === 'spheres') {
+        if (settings.mode === 'original') {
+          drawFlame(micMult, beat);
+        } else if (settings.mode === 'spheres') {
           drawParticles(micMult, beat);
         } else if (settings.mode === 'abstract') {
           drawAbstract(micMult, beat);
@@ -1692,7 +1743,9 @@
       }
 
       function initMode() {
-        if (settings.mode === 'spheres') {
+        if (settings.mode === 'original') {
+          initFlame();
+        } else if (settings.mode === 'spheres') {
           initParticles();
         } else if (settings.mode === 'abstract') {
           initAbstracts();
@@ -2162,18 +2215,22 @@
       modeSelect.addEventListener('change', function(e) {
         const mode = e.target.value;
         if (mode === 'original') {
-          // Mostrar llama WebGL y ocultar otros modos
+          // Modo "original" ahora usa el lienzo 2D, no React
+          document.getElementById('flame-wrapper').style.display = 'none';
           document.getElementById('threeContainer').style.display = 'none';
           document.getElementById('controls3d').style.display = 'none';
           document.getElementById('controls3dCollapsed').style.display = 'none';
-          document.getElementById('canvas2d').style.display = 'none';
-          document.getElementById('controls2d').style.display = 'none';
-          document.getElementById('controls2dCollapsed').style.display = 'none';
-          document.getElementById('flame-wrapper').style.display = 'block';
-          if (!isReactMounted) {
-            ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
-            isReactMounted = true;
+          document.getElementById('canvas2d').style.display = 'block';
+          // Mostrar u ocultar panel 2D dependiendo de su estado colapsado
+          if (isPanel2dCollapsed) {
+            document.getElementById('controls2d').style.display = 'none';
+            document.getElementById('controls2dCollapsed').style.display = 'block';
+          } else {
+            document.getElementById('controls2d').style.display = 'block';
+            document.getElementById('controls2dCollapsed').style.display = 'none';
           }
+          // Actualizar el modo del motor 2D
+          window._update2dMode('original');
         } else if (mode === '3d') {
           // Mostrar modo 3D utilizando Three.js
           document.getElementById('flame-wrapper').style.display = 'none';
@@ -2211,15 +2268,17 @@
       });
       // Inicialización al cargar
       if (modeSelect.value === 'original') {
+        // Para el modo original reprogramado, usar el lienzo 2D
+        document.getElementById('flame-wrapper').style.display = 'none';
         document.getElementById('threeContainer').style.display = 'none';
         document.getElementById('controls3d').style.display = 'none';
         document.getElementById('controls3dCollapsed').style.display = 'none';
-        document.getElementById('canvas2d').style.display = 'none';
-        document.getElementById('controls2d').style.display = 'none';
+        document.getElementById('canvas2d').style.display = 'block';
+        document.getElementById('controls2d').style.display = 'block';
         document.getElementById('controls2dCollapsed').style.display = 'none';
-        document.getElementById('flame-wrapper').style.display = 'block';
-        ReactDOM.render(React.createElement(EternalFlameCanvas), document.getElementById('flame-wrapper'));
-        isReactMounted = true;
+        window._update2dMode('original');
+        // No se usa React en el modo original reprogramado
+        isReactMounted = false;
       } else {
         // Mostrar modos 2D (esferas, abstracto, personalizado, barras)
         document.getElementById('flame-wrapper').style.display = 'none';
