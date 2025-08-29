@@ -2225,22 +2225,23 @@
       modeSelect.addEventListener('change', function(e) {
         const mode = e.target.value;
         if (mode === 'original') {
-          // Modo "original" ahora usa el lienzo 2D, no React
-          document.getElementById('flame-wrapper').style.display = 'none';
+          // Mostrar contenedor de React/WebGL para la llama original y ocultar otros contenedores.
+          document.getElementById('flame-wrapper').style.display = 'block';
+          document.getElementById('canvas2d').style.display = 'none';
           document.getElementById('threeContainer').style.display = 'none';
           document.getElementById('controls3d').style.display = 'none';
           document.getElementById('controls3dCollapsed').style.display = 'none';
-          document.getElementById('canvas2d').style.display = 'block';
-          // Mostrar u ocultar panel 2D dependiendo de su estado colapsado
-          if (isPanel2dCollapsed) {
-            document.getElementById('controls2d').style.display = 'none';
-            document.getElementById('controls2dCollapsed').style.display = 'block';
-          } else {
-            document.getElementById('controls2d').style.display = 'block';
-            document.getElementById('controls2dCollapsed').style.display = 'none';
+          // Ocultar panel 2D y su versión colapsada
+          document.getElementById('controls2d').style.display = 'none';
+          document.getElementById('controls2dCollapsed').style.display = 'none';
+          // Montar el componente React si aún no está montado
+          if (!isReactMounted && typeof ReactDOM !== 'undefined' && typeof EternalFlameCanvas !== 'undefined') {
+            ReactDOM.render(
+              React.createElement(EternalFlameCanvas, null),
+              document.getElementById('flame-wrapper')
+            );
+            isReactMounted = true;
           }
-          // Actualizar el modo del motor 2D
-          window._update2dMode('original');
         } else if (mode === '3d') {
           // Mostrar modo 3D utilizando Three.js
           document.getElementById('flame-wrapper').style.display = 'none';
@@ -2278,28 +2279,30 @@
       });
       // Inicialización al cargar
       if (modeSelect.value === 'original') {
-        // Para el modo original reprogramado, usar el lienzo 2D
-        document.getElementById('flame-wrapper').style.display = 'none';
+        // Mostrar el contenedor WebGL y montar React
+        document.getElementById('flame-wrapper').style.display = 'block';
+        document.getElementById('canvas2d').style.display = 'none';
         document.getElementById('threeContainer').style.display = 'none';
+        document.getElementById('controls2d').style.display = 'none';
+        document.getElementById('controls2dCollapsed').style.display = 'none';
         document.getElementById('controls3d').style.display = 'none';
         document.getElementById('controls3dCollapsed').style.display = 'none';
-        document.getElementById('canvas2d').style.display = 'block';
-        document.getElementById('controls2d').style.display = 'block';
-        document.getElementById('controls2dCollapsed').style.display = 'none';
-        window._update2dMode('original');
-        // No se usa React en el modo original reprogramado
-        isReactMounted = false;
+        if (!isReactMounted && typeof ReactDOM !== 'undefined' && typeof EternalFlameCanvas !== 'undefined') {
+          ReactDOM.render(
+            React.createElement(EternalFlameCanvas, null),
+            document.getElementById('flame-wrapper')
+          );
+          isReactMounted = true;
+        }
       } else {
-        // Mostrar modos 2D (esferas, abstracto, personalizado, barras)
+        // Para cualquier otro modo, mostrar el canvas 2D y ocultar React
         document.getElementById('flame-wrapper').style.display = 'none';
-        // Ocultar el contenedor Three.js y sus paneles, ya que el modo 3D se ha eliminado
         document.getElementById('threeContainer').style.display = 'none';
         document.getElementById('controls3d').style.display = 'none';
         document.getElementById('controls3dCollapsed').style.display = 'none';
         document.getElementById('canvas2d').style.display = 'block';
         document.getElementById('controls2d').style.display = 'block';
         document.getElementById('controls2dCollapsed').style.display = 'none';
-        // Inicializa el modo 2D seleccionado (incluyendo 'custom' y 'bars')
         window._update2dMode(modeSelect.value);
       }
     })();
