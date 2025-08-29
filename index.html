@@ -60,6 +60,7 @@
       <option value="custom">Personalizado</option>
       <option value="bars">Barras</option>
       <option value="lines">Líneas</option>
+      <option value="galaxy">Galaxia</option>
     </select>
   </div>
 
@@ -696,18 +697,32 @@
       }
       function micEnvelope() {
         const m = micRef.current;
-        if (!m || !m.analyser || !ui.micReactive) return 0;
-        m.analyser.getByteFrequencyData(m.data);
-        const bins = Math.min(40, m.data.length);
-        let sum = 0;
-        for (let i = 1; i < bins; i++) sum += m.data[i];
-        let avg = sum / bins / 255;
-        // Amplificar la señal de audio para mayor reactividad (factor aumentado)
-        // Amplify the envelope even more to accentuate mic-reactive effects
-        avg *= 10.0;
-        m.env = lerp(m.env, avg, 0.25);
-        // Ajustar el límite máximo para permitir más efecto visual
-        return clamp(m.env * (m.sensitivity || 1), 0, 7.0);
+        // Attempt to reuse the global mic level from the 2D visualizers if available
+        let sharedLevel = 0;
+        if (typeof window.getMicLevel === 'function') {
+          try {
+            sharedLevel = window.getMicLevel();
+          } catch (err) {
+            sharedLevel = 0;
+          }
+        }
+        // If we have our own analyser and mic is enabled in this component
+        if (m && m.analyser && ui.micReactive) {
+          m.analyser.getByteFrequencyData(m.data);
+          const bins = Math.min(40, m.data.length);
+          let sum = 0;
+          for (let i = 1; i < bins; i++) sum += m.data[i];
+          let avg = sum / bins / 255;
+          // Amplify the signal significantly to enhance reactivity
+          avg *= 10.0;
+          // Smooth the envelope
+          m.env = lerp(m.env, avg, 0.25);
+          return clamp(m.env * (m.sensitivity || 1), 0, 7.0);
+        } else {
+          // Fallback: use the shared mic level from 2D visualizers if available
+          // Multiply to approximate the same amplification as above
+          return clamp(sharedLevel * 10.0 * (ui.micSensitivity || 1), 0, 7.0);
+        }
       }
 
       // Share link
@@ -1306,6 +1321,14 @@
         return sum / dataArray.length / 255;
       }
 
+      // Expose the microphone level getter on the global window so that the WebGL
+      // flame can reuse the same audio source instead of requesting a separate
+      // stream. This helps ensure mic-reactive effects work consistently across
+      // all visualizers. Only assign if not already defined.
+      if (!window.getMicLevel) {
+        window.getMicLevel = getMicLevel;
+      }
+
       // Partículas básicas para modo "esferas"
       class Particle {
         constructor() {
@@ -1529,6 +1552,71 @@
         }
       }
 
+      // ===================== Galaxia Visualizer =====================
+      // Conjunto de estrellas que orbitan alrededor del centro simulando una galaxia.
+      let stars = [];
+
+      // Inicializa las estrellas con posiciones radiales y ángulos aleatorios. El número
+      // de estrellas depende de settings.count. Las velocidades de rotación y los
+      // radios se ajustan con settings.turb y una distribución que acumula más
+      // estrellas cerca del centro.
+      function initGalaxy() {
+        stars = [];
+        const n = Math.max(1, settings.count);
+        const maxRadius = Math.min(width, height) * 0.45;
+        for (let i = 0; i < n; i++) {
+          // Distribuir el radio usando la raíz cuadrada para densidad hacia el centro
+          const radius = Math.sqrt(Math.random()) * maxRadius;
+          const angle = Math.random() * Math.PI * 2;
+          // Velocidad angular aleatoria influenciada por turbulencia
+          const baseSpeed = 0.1 + Math.random() * 0.5;
+          const dir = Math.random() < 0.5 ? -1 : 1;
+          const speed = dir * baseSpeed;
+          // Color basado en los cuatro colores seleccionados según radio
+          let t = radius / maxRadius;
+          let col;
+          if (t < 1 / 3) {
+            col = lerpColorHex(settings.color1, settings.color2, t * 3);
+          } else if (t < 2 / 3) {
+            col = lerpColorHex(settings.color2, settings.color3, (t - 1 / 3) * 3);
+          } else {
+            col = lerpColorHex(settings.color3, settings.color4, (t - 2 / 3) * 3);
+          }
+          stars.push({ radius, angle, speed, color: col });
+        }
+      }
+
+      // Dibuja las estrellas en espiral simulando una galaxia. Las estrellas
+      // rotan alrededor del centro y se desplazan radialmente en función de
+      // settings.turb y micMult. El color se invierte en los beats.
+      function drawGalaxy(micMult, beat) {
+        const cx = width / 2;
+        const cy = height / 2;
+        const baseSize = settings.size * 1.2;
+        for (const s of stars) {
+          // Actualizar ángulo: la velocidad aumenta con el micrófono
+          s.angle += s.speed * settings.speed * (0.2 + micMult * 0.3);
+          // Pequeñas variaciones radiales para simular inestabilidad/turbulencia
+          s.radius += Math.sin(s.angle * 3.0) * settings.turb * 0.02;
+          // Evitar que la estrella salga demasiado: mantener radio dentro de los límites
+          s.radius = Math.max(10, Math.min(s.radius, Math.min(width, height) * 0.45));
+          const x = cx + Math.cos(s.angle) * s.radius;
+          const y = cy + Math.sin(s.angle) * s.radius;
+          // Tamaño de estrella modulado por micrófono
+          const r = baseSize * (0.5 + micMult * 0.5);
+          // Color invertido en beat y ligeramente más brillante con mic
+          let col = s.color;
+          if (beat) {
+            col = invertColor3D(col);
+          }
+          // Convertir el color hex a rgba con alfa según micMult
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       // Dibujar visualizador de barras al estilo de reproductores clásicos
       function drawBars(micMult, beat) {
         // Recalcular el nivel del micrófono para cada cuadro para mayor precisión
@@ -1582,6 +1670,8 @@
           drawBars(micMult, beat);
         } else if (settings.mode === 'lines') {
           drawLines(micMult, beat);
+        } else if (settings.mode === 'galaxy') {
+          drawGalaxy(micMult, beat);
         }
 
         // Ajustar viento objetivo según drift o puntero
@@ -1623,6 +1713,8 @@
           initBars();
         } else if (settings.mode === 'lines') {
           initLines();
+        } else if (settings.mode === 'galaxy') {
+          initGalaxy();
         }
       }
 
