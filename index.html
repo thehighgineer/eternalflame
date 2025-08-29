@@ -655,7 +655,8 @@
           lastPointerX.current = x;
           // Amplify touch wind effect by increasing the multiplier. Larger values make the wind influence more noticeable.
           const norm = clamp(dx / window.innerWidth, -1, 1);
-          targetWindRef.current = clamp(stateRef.current.wind + norm * 5.0, -3, 3);
+          // Apply an even stronger multiplier to make touch wind clearly influence the flame
+          targetWindRef.current = clamp(stateRef.current.wind + norm * 8.0, -4, 4);
         }
         function onUp() {
           lastPointerX.current = null;
@@ -697,33 +698,18 @@
         }
       }
       function micEnvelope() {
-        const m = micRef.current;
-        // Attempt to reuse the global mic level from the 2D visualizers if available
-        let sharedLevel = 0;
+        // Always derive the audio envelope from the shared mic level provided by the 2D visualizers.
+        // This avoids relying on a separate analyser and ensures the original flame reacts when the 2D mic is active.
+        let level = 0;
         if (typeof window.getMicLevel === 'function') {
           try {
-            sharedLevel = window.getMicLevel();
+            level = window.getMicLevel();
           } catch (err) {
-            sharedLevel = 0;
+            level = 0;
           }
         }
-        // If we have our own analyser and mic is enabled in this component
-        if (m && m.analyser && ui.micReactive) {
-          m.analyser.getByteFrequencyData(m.data);
-          const bins = Math.min(40, m.data.length);
-          let sum = 0;
-          for (let i = 1; i < bins; i++) sum += m.data[i];
-          let avg = sum / bins / 255;
-          // Amplify the signal significantly to enhance reactivity
-          avg *= 10.0;
-          // Smooth the envelope
-          m.env = lerp(m.env, avg, 0.25);
-          return clamp(m.env * (m.sensitivity || 1), 0, 7.0);
-        } else {
-          // Fallback: use the shared mic level from 2D visualizers if available
-          // Multiply to approximate the same amplification as above
-          return clamp(sharedLevel * 10.0 * (ui.micSensitivity || 1), 0, 7.0);
-        }
+        // Strongly amplify the shared level to produce visible changes. Multiply by micSensitivity from the UI.
+        return clamp(level * 15.0 * (ui.micSensitivity || 1), 0, 10.0);
       }
 
       // Share link
@@ -1565,14 +1551,14 @@
         stars = [];
         const n = Math.max(1, settings.count);
         // Expand the galaxy to occupy a larger portion of the canvas
-        const maxRadius = Math.min(width, height) * 0.6;
+        const maxRadius = Math.min(width, height) * 0.8;
         for (let i = 0; i < n; i++) {
           // Distribuir el radio usando la raíz cuadrada para densidad hacia el centro
           const radius = Math.sqrt(Math.random()) * maxRadius;
           const angle = Math.random() * Math.PI * 2;
           // Velocidad angular aleatoria influenciada por turbulencia
-          // Slow down rotation: start with a lower base speed and random variation
-          const baseSpeed = 0.02 + Math.random() * 0.2;
+          // Slow down rotation further: start with a very low base speed and small random variation
+          const baseSpeed = 0.01 + Math.random() * 0.1;
           const dir = Math.random() < 0.5 ? -1 : 1;
           const speed = dir * baseSpeed;
           // Color basado en los cuatro colores seleccionados según radio
@@ -1853,8 +1839,8 @@
         if (settings.pointerWind) {
           const relX = e.clientX / width;
           // Mapea la posición horizontal a un rango de viento -2..2
-          // Increase the mapping factor from pointer position to wind for a more dramatic effect
-          targetWind = (relX - 0.5) * 8;
+          // Increase the mapping factor from pointer position to wind for an even more dramatic effect
+          targetWind = (relX - 0.5) * 10;
         }
       });
       canvas.addEventListener('mouseleave', () => {
